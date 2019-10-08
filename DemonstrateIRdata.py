@@ -10,6 +10,8 @@ import numpy as np
 from PIL import Image, ImageFilter
 import cv2 as cv
 
+from IRCamera import IRCamera
+
 headSize = 4
 scope = 20
 ir_array_data = np.array((32 * scope, 24 * scope, 3))
@@ -119,7 +121,9 @@ head = []
 data = []
 string = ''
 # 这块是配置串口，将来可能需要自动检测
-with serial.Serial('COM6', 460800, timeout=None) as ser:
+# 已通过IRCamera实现
+ir_data = IRCamera()
+with serial.Serial(ir_data.port_name, ir_data.baud_rate, timeout=None) as ser:
     while True:
         s = ser.read(1).hex()
         string = string + s
