@@ -57,7 +57,7 @@ class DemonProcess(object):
         :param ir_data: is a string whose length is
         :return:
         """
-        if len(ir_data) != 1540*2:
+        if len(ir_data) != 1540 * 2:
             # 正常传过来一个字节 0xa5 是一个字节，一个元素表示4位， 然后用string表示一个字母就是一个字节
             print("the array of ir_data is not 1540", len(ir_data))
 
@@ -116,7 +116,73 @@ class DemonProcess(object):
         theta_left, theta_right = -1, -1
         return theta_left, theta_right
 
-    def demo_record(self, np_ir):
+    def binary_image(self, np_ir):
+        """
+
+        threshold = 106可调
+        findContours(thresh,mode,method), mode 和 method 可调
+
+        这个函数用来以后调这个值
+
+        :param np_ir:
+        :return:
+        """
+        gary = cv.cvtColor(np_ir, cv.COLOR_BGR2GRAY)
+        ret, thresh = cv.threshold(gary, 106, 255, 0)
+        contours, hierarchy = cv.findContours(thresh, 1, 2)
+        cv.drawContours(np_ir, contours, -1, (255, 0, 0), 3)
+        return np_ir, contours
+
+    def find_foot(self, np_ir, contours):
+        big_partten = []
+        for item in contours:
+            area = cv.contourArea(item)
+            if area > 45000:
+                big_partten.append(item)
+        # self.print_contours(big_partten)
+        if len(big_partten) == 2:
+            for item in big_partten:
+                hull = cv.convexHull(item)
+
+                if hull.shape[0] < 10:
+                    print('the num is less than 10.')
+                    break
+                foot = []
+                for a in hull:
+                    if a[0][1] > 100:
+                        foot.append(a)
+
+                foot_np = np.array(foot)
+                rect = cv.minAreaRect(foot_np)
+                box = cv.boxPoints(rect)
+                box = np.int0(box)
+                cv.drawContours(np_ir, [box], 0, (0, 0, 255), 2)
+
+                x, y, w, h = cv.boundingRect(foot_np)
+                cv.rectangle(np_ir, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            return
+        else:
+            return
+
+    def print_contours(self, contours):
+        print("------------------------------------")
+        print("the num of contours:%d" % len(contours))
+        for item in contours:
+            area = cv.contourArea(item)
+            print("the area of :", area)
+
+        return
+
+    def demo_record(self, np_ir, mode='continuous'):
+        """
+
+        :param np_ir:
+        :param mode: continuous and frame-by-frame
+        :return:
+        """
+
+        # 在这里考虑一下如何，可以既填数又填string
+
         cv.imshow("The IR data", np_ir)
         self.out.write(np_ir)
         if cv.waitKey(1) == ord('q'):
@@ -125,6 +191,8 @@ class DemonProcess(object):
             self.serial.close()
             return -1
         else:
+            if mode == 'frame-by-frame':
+                cv.waitKey(-1)
             return 1
 
 
@@ -151,6 +219,8 @@ if __name__ == '__main__':
             # 将读到的数据进行展示
             if len(data) == 5:
                 temp, ir_np = dp.demonstrate_data(data[4])
-                if dp.demo_record(ir_np) == -1:
+                ir_np, contours = dp.binary_image(ir_np)
+                dp.find_foot(ir_np, contours)
+                if dp.demo_record(ir_np) == -1:  # , 'frame-by-frame'
                     break
                 data.pop(4)
