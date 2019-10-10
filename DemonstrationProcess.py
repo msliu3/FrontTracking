@@ -9,10 +9,9 @@
 2019/10/9 22:24   msliu      1.0         OOP for Demo and process, the output is theta and temperature
 """
 
-# import lib
 import serial
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image
 import cv2 as cv
 
 from IRCamera import IRCamera
@@ -21,15 +20,17 @@ from IRCamera import IRCamera
 class DemonProcess(object):
     head_size = 4
 
-    def __init__(self, scope):
+    def __init__(self, scope=30, fps=5, output_path="./resource/output.avi"):
+        self.env = -1
         self.scope = scope
         self.ir_array_data = np.array((32 * self.scope, 24 * self.scope))
 
         ir_camera = IRCamera()
         port_name, baud_rate = ir_camera.get_portname_baudrate()
+        self.serial = serial.Serial(port_name, baud_rate, timeout=None)
 
-        self.__serial = serial.Serial(port_name, baud_rate, timeout=None)
-
+        self.out = cv.VideoWriter(output_path, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'), fps,
+                                  (32 * self.scope, 24 * self.scope))
         return
 
     def check_head_data(self, head_data):
@@ -38,32 +39,34 @@ class DemonProcess(object):
         :param head_data: The read data could be frame.
         :return:
         """
-
-        # if len(head_data) != self.head_size:
-        #     print('The length of head is not equal to 4')
-        #     return False
-
-        #    This is head ir_data from one frame
         if head_data is None:
+            print("check_head_data: the head data is None")
             head_data = []
         head = [0x5A, 0x5A, 0x02, 0x06]
         for i in range(self.head_size):
             if head_data[i] != head[i]:
+                # print("The head is not caught")
                 return False
+
         return True
 
-    def demonstrate_data(self, ir_data=''):
+    def demonstrate_data(self, ir_data, zoom_filter=Image.BILINEAR):
         """
 
+        :param zoom_filter: Image.HAMMING or Image.BILINEAR
         :param ir_data: is a string whose length is
         :return:
         """
+        if len(ir_data) != 1540*2:
+            # 正常传过来一个字节 0xa5 是一个字节，一个元素表示4位， 然后用string表示一个字母就是一个字节
+            print("the array of ir_data is not 1540", len(ir_data))
+
         temperature = []
         temp_data = []
         for i in range(769):
             t = (int(ir_data[i * 4 + 2:i * 4 + 4], 16) * 256 + int(ir_data[i * 4:i * 4 + 2], 16)) / 100
             temp_data.append(t)
-        env = temp_data.pop()
+        self.env = temp_data.pop()
         self.__fix_pixel(temp_data, 6, 9)
         for i in temp_data:
             temperature.append(int(i))
@@ -81,18 +84,9 @@ class DemonProcess(object):
         rgbdata = rgbdata.T.reshape(24, 32, 3)
         image2 = Image.fromarray(rgbdata)
 
-        # 马赛克版本
-        # im = image2.resize((32 * scope, 24 * scope), Image.HAMMING)
-
-        im = image2.resize((32 * self.scope, 24 * self.scope), Image.BILINEAR)
+        im = image2.resize((32 * self.scope, 24 * self.scope), zoom_filter)
         array = np.array(im)
-        global ir_array_data, out
-        ir_array_data = array
-        # array = contour_feature(array)
 
-        out.write(array)
-        cv.imshow("image", array)
-        # cv.waitKey(-1)
         return temperature, array
 
     def __fix_pixel(self, ir_list=[], x=6, y=9):
@@ -118,34 +112,45 @@ class DemonProcess(object):
 
         return ir_list
 
-    def record_video(self, fps, output_path="./resource/output.avi"):
-        out = cv.VideoWriter(output_path, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'), fps,
-                             (32 * self.scope, 24 * self.scope))
-        head = []
-        data = []
-        while True:
-            s = self.__serial.read(1).hex()
-            if s != "":
-                s = int(s, 16)
+    def analysis_foot(self):
+        theta_left, theta_right = -1, -1
+        return theta_left, theta_right
 
-            head.append(s)
-            if len(head) == self.head_size:
-                if self.check_head_data(head):
-                    temp = self.__serial.read(1540)
-                    data.append(temp.hex())
-
-                for i in range(4):
-                    head.pop(0)
-            # 将读到的数据进行展示，这个data是一个链表，前4个算是我舍弃的数据，一直在操作5项
-            if len(data) == 5:
-                demonstrate_data(data[4])
-                if cv.waitKey(1) == ord('q'):
-                    break
-                data.pop(4)
-        out.release()
-        cv.destroyAllWindows()
-        self.__serial.close()
-        return
+    def demo_record(self, np_ir):
+        cv.imshow("The IR data", np_ir)
+        self.out.write(np_ir)
+        if cv.waitKey(1) == ord('q'):
+            self.out.release()
+            cv.destroyAllWindows()
+            self.serial.close()
+            return -1
+        else:
+            return 1
 
 
 pass
+
+if __name__ == '__main__':
+    dp = DemonProcess()
+    head = []
+    data = []
+    while True:
+        s = dp.serial.read(1).hex()
+        if s != "":
+            s = int(s, 16)
+        head.append(s)
+
+        if len(head) == dp.head_size:
+            if dp.check_head_data(head):
+                temp = dp.serial.read(1540)
+                data.append(temp.hex())
+                head.clear()
+            else:
+                head.pop(0)
+
+            # 将读到的数据进行展示
+            if len(data) == 5:
+                temp, ir_np = dp.demonstrate_data(data[4])
+                if dp.demo_record(ir_np) == -1:
+                    break
+                data.pop(4)
