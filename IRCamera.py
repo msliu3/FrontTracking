@@ -9,7 +9,6 @@
 2019/10/8 19:46   msliu      1.0         None
 """
 
-import serial
 import serial.tools.list_ports
 
 
@@ -46,14 +45,23 @@ class IRCamera(object):
             if port.description == description:
                 port_list = port.description
                 port_path = port.device
+                return port_path, port_list
+            else:
+                print("Cannot find the device: IR Camera")
+
 
             # print("%x and %x" % (port.vid, port.pid))
             # if vid == port.vid and port.pid == pid:
             #     port_list.append(port)
             #     port_cnt += 1
         #     这里我还不知道vid和pid是什么东西
-        return port_path, port_list
+        return None, None
+
+    def get_portname_baudrate(self):
+        return self.port_name, self.baud_rate
 
 
 if __name__ == '__main__':
     ir_data = IRCamera()
+    portname, baudrate = ir_data.get_portname_baudrate()
+    print(portname, baudrate)

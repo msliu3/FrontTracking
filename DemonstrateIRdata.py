@@ -15,9 +15,15 @@ from IRCamera import IRCamera
 headSize = 4
 scope = 20
 ir_array_data = np.array((32 * scope, 24 * scope, 3))
+out = cv.VideoWriter('./resource/output.avi', cv.VideoWriter_fourcc('M', 'J', 'P', 'G'), 10.0, (32 * scope, 24 * scope))
 
 
 def check_head_data(head_data=[]):
+    """
+    This function is to detect the head of frame from IR Camera
+    :param head_data: The read data could be frame.
+    :return:
+    """
     global headSize
     if len(head_data) != headSize:
         print('The length of head is not equal to 4')
@@ -31,6 +37,13 @@ def check_head_data(head_data=[]):
 
 
 def fix_pixel(list=[], x=6, y=9):
+    """
+    :param list: temperature ir_list, the ir data source
+    :param x: the position x from 1
+    :param y: the position y from 1
+    :return: the average temperature to fix one pixel
+
+    """
     x -= 1
     y -= 1
     temp = (list[x - 1 + (y - 1) * 32] +
@@ -109,9 +122,11 @@ def demonstrate_data(ir_data=''):
 
     im = image2.resize((32 * scope, 24 * scope), Image.BILINEAR)
     array = np.array(im)
-    global ir_array_data
+    global ir_array_data, out
     ir_array_data = array
-    array = contour_feature(array)
+    # array = contour_feature(array)
+
+    out.write(array)
     cv.imshow("image", array)
     # cv.waitKey(-1)
     return temperature
@@ -139,10 +154,11 @@ with serial.Serial(ir_data.port_name, ir_data.baud_rate, timeout=None) as ser:
             for i in range(4):
                 head.pop(0)
         # 将读到的数据进行展示
-        if len(data) == 5:
-            demonstrate_data(data[4])
-            if cv.waitKey(1) == ord('q'):
-                break
-            data.pop(4)
+            if len(data) == 5:
+                demonstrate_data(data[4])
+                if cv.waitKey(1) == ord('q'):
+                    break
+                data.pop(4)
+out.release()
 cv.destroyAllWindows()
 ser.close()
