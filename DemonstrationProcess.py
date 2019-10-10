@@ -134,14 +134,15 @@ class DemonProcess(object):
         return np_ir, contours
 
     def find_foot(self, np_ir, contours):
-        big_partten = []
+        big_pattern = []
         for item in contours:
             area = cv.contourArea(item)
             if area > 45000:
-                big_partten.append(item)
-        # self.print_contours(big_partten)
-        if len(big_partten) == 2:
-            for item in big_partten:
+                big_pattern.append(item)
+        # self.print_contours(big_pattern)
+        if len(big_pattern) == 2:
+
+            for item in big_pattern:
                 hull = cv.convexHull(item)
 
                 if hull.shape[0] < 10:
@@ -160,9 +161,21 @@ class DemonProcess(object):
 
                 x, y, w, h = cv.boundingRect(foot_np)
                 cv.rectangle(np_ir, (x, y), (x + w, y + h), (0, 0, 255), 2)
-            return
+
+                if x < (32 * self.scope) / 2:
+                    cv.putText(np_ir, str(int(90 + rect[2])), (100, 100), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 255), 2,
+                               cv.LINE_AA)
+                else:
+                    cv.putText(np_ir, str(int( - rect[2])), (32*self.scope-500, 100), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 1,
+                               cv.LINE_AA)
+
+            return big_pattern
         else:
             return
+
+    def calculate_theta_direct(self, foot_pattern, np_ir):
+
+        return
 
     def print_contours(self, contours):
         print("------------------------------------")
