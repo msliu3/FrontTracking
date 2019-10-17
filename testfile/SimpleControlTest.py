@@ -23,8 +23,9 @@ import serial
 import robotserialcontrol.DigitalServoDriver as dsd
 
 DigitalDriver = dsd.DigitalServoDriver()
+print(DigitalDriver.port_name,DigitalDriver.port_list)
 
-with serial.Serial(DigitalDriver.port_name, DigitalDriver.baud_rate, timeout=None) as ser:
+with serial.Serial(DigitalDriver.port_name[1], DigitalDriver.baud_rate, timeout=None) as ser:
     # 启动
     start = [0x00, 0x00, 0x01, 0x01]
     ser.write(bytes(start))
@@ -33,7 +34,7 @@ with serial.Serial(DigitalDriver.port_name, DigitalDriver.baud_rate, timeout=Non
     ser.write(bytes(pc))
     #   PC数字输入
     speed = [0x06, 0x00, 0x88, 0x8e]
-    ser.write(bytes(speed))
+    ser.write([0x06, 0x00, 0x88, 0x8e])
     # 等待60秒
     while True:
         time.sleep(0.5)

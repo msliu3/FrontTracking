@@ -14,27 +14,35 @@ import serial.tools.list_ports
 
 class DigitalServoDriver(object):
 
-    def __init__(self, baud_rate = 57600):
+    def __init__(self, baud_rate=57600, left_right=1):
         self.baud_rate = baud_rate
         self.port_name, self.port_list = self.detect_serials("Prolific USB-to-Serial Comm Port")
-        print(self.port_name, self.baud_rate)
+
+        if left_right == 1:
+            self.left = self.port_name[0]
+            self.right = self.port_name[1]
+        else:
+            self.left = self.port_name[1]
+            self.right = self.port_name[0]
+
+        print("The left port is %s, the right port is %s. The baudrate is %d" % (self.left, self.right, self.baud_rate))
         return
 
     def detect_serials(self, description, vid=0x10c4, pid=0xea60):
         ports = serial.tools.list_ports.comports()
         port_cnt = 0
         port_list = []
+        port_path = []
         for port in ports:
             # self.print_serial(port)
 
             # 这有问题，如果两个串口如何检测，如何区分左右
 
             if port.description.__contains__(description):
-                port_list = port.description
-                port_path = port.device
-                return port_path, port_list
-            else:
-                print("Cannot find the device: IR Camera")
+                port_list.append(port.description)
+                port_path.append(port.device)
+
+        return port_path, port_list
 
     def simple_control_test(self):
         """
@@ -45,6 +53,7 @@ class DigitalServoDriver(object):
         return
 
     pass
+
 
 if __name__ == '__main__':
     dsd = DigitalServoDriver()
