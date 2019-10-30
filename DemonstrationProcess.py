@@ -13,6 +13,7 @@ import serial
 import numpy as np
 from PIL import Image
 import cv2 as cv
+import ProcessFunc as pf
 
 from IRCamera import IRCamera
 
@@ -74,8 +75,8 @@ class DemonProcess(object):
         mintemp = min(temp_data)
 
         for i in range(len(temp_data)):
-            # temp_data[i] = int((temp_data[i] - mintemp) / (maxtemp - mintemp) * 255)
-            temp_data[i] = int((temp_data[i] - 5) / (45 - 10) * 255)
+            temp_data[i] = int((temp_data[i] - mintemp) / (maxtemp - mintemp) * 255)
+            # temp_data[i] = int((temp_data[i] - 5) / (45 - 10) * 255)
 
         npdata = np.array(temp_data).reshape(24, 32)
         temperature = np.array(temperature, np.float32).reshape(24, 32)
@@ -157,19 +158,12 @@ class DemonProcess(object):
                         foot.append(a)
 
                 foot_np = np.array(foot)
-                rect = cv.minAreaRect(foot_np)
-                box = cv.boxPoints(rect)
-                box = np.int0(box)
-                cv.drawContours(np_ir, [box], 0, (0, 0, 255), 2)
 
-                rows, cols = np_ir.shape[:2]
-                [vx, vy, x, y] = cv.fitLine(foot_np, cv.DIST_L2, 0, 0.01, 0.01)
-                lefty = int((-x * vy / vx) + y)
-                righty = int(((cols - x) * vy / vx) + y)
-                cv.line(np_ir, (cols - 1, righty), (0, lefty), (0, 255, 0), 2)
+                rect = pf.draw_min_rectangle(np_ir, foot_np)
 
-                x, y, w, h = cv.boundingRect(foot_np)
-                cv.rectangle(np_ir, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                pf.draw_min_line(np_ir, foot_np)
+
+                x, y = pf.draw_normal_rectangle(np_ir, foot_np)
 
                 if x < (32 * self.scope) / 2:
                     cv.putText(np_ir, str(int(90 + rect[2])), (100, 100), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 255),
