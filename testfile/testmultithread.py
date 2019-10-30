@@ -15,26 +15,24 @@ None
 
 import threading
 import time
-import multiprocessing as ml
 import robotserialcontrol.ControlDriver as CD
 
 
 def loop(control):
     while True:
-        time.sleep(15)
-        print("end_this")
-        # temp = input("num")
-        # if temp == -1:
-        #     control.flag_end = 1
-        #     break
-        # control.speed = temp
+        time.sleep(5)
+        temp = input("num")
+        if temp == -1:
+            control.flag_end = 1
+            break
+        control.speed = float(temp)
 
 
 if __name__ == '__main__':
     # t = threading.Thread(target=loop(name))
     cd = CD.ControlDriver()
-    p1 = ml.Process(target=loop, args=(cd,))
-    p2 = ml.Process(target=CD.ControlDriver.control_part, args=())
+    p1 = threading.Thread(target=loop, args=(cd,))
+    p2 = threading.Thread(target=cd.control_part, args=())
     print("hehe")
     p2.start()
     p1.start()

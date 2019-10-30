@@ -74,7 +74,8 @@ class DemonProcess(object):
         mintemp = min(temp_data)
 
         for i in range(len(temp_data)):
-            temp_data[i] = int((temp_data[i] - mintemp) / (maxtemp - mintemp) * 255)
+            # temp_data[i] = int((temp_data[i] - mintemp) / (maxtemp - mintemp) * 255)
+            temp_data[i] = int((temp_data[i] - 5) / (45 - 10) * 255)
 
         npdata = np.array(temp_data).reshape(24, 32)
         temperature = np.array(temperature, np.float32).reshape(24, 32)
@@ -128,18 +129,20 @@ class DemonProcess(object):
         :return:
         """
         gary = cv.cvtColor(np_ir, cv.COLOR_BGR2GRAY)
-        ret, thresh = cv.threshold(gary, 106, 255, 0)
+        ret, thresh = cv.threshold(gary, 127, 255, 0)
         contours, hierarchy = cv.findContours(thresh, 1, 2)
         cv.drawContours(np_ir, contours, -1, (255, 0, 0), 3)
         return np_ir, contours
 
     def find_foot(self, np_ir, contours):
         big_pattern = []
+        # 先通过大小45000像素点，判断一下可不可能是脚
         for item in contours:
             area = cv.contourArea(item)
             if area > 45000:
                 big_pattern.append(item)
         # self.print_contours(big_pattern)
+        # 如果是分成了两个部分，那么判断是脚
         if len(big_pattern) == 2:
 
             for item in big_pattern:
@@ -159,14 +162,22 @@ class DemonProcess(object):
                 box = np.int0(box)
                 cv.drawContours(np_ir, [box], 0, (0, 0, 255), 2)
 
+                rows, cols = np_ir.shape[:2]
+                [vx, vy, x, y] = cv.fitLine(foot_np, cv.DIST_L2, 0, 0.01, 0.01)
+                lefty = int((-x * vy / vx) + y)
+                righty = int(((cols - x) * vy / vx) + y)
+                cv.line(np_ir, (cols - 1, righty), (0, lefty), (0, 255, 0), 2)
+
                 x, y, w, h = cv.boundingRect(foot_np)
                 cv.rectangle(np_ir, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
                 if x < (32 * self.scope) / 2:
-                    cv.putText(np_ir, str(int(90 + rect[2])), (100, 100), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 255), 2,
+                    cv.putText(np_ir, str(int(90 + rect[2])), (100, 100), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 255),
+                               2,
                                cv.LINE_AA)
                 else:
-                    cv.putText(np_ir, str(int( - rect[2])), (32*self.scope-500, 100), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 1,
+                    cv.putText(np_ir, str(int(- rect[2])), (32 * self.scope - 500, 100), cv.FONT_HERSHEY_SIMPLEX, 2,
+                               (255, 255, 255), 1,
                                cv.LINE_AA)
 
             return big_pattern

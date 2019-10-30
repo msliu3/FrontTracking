@@ -18,9 +18,10 @@
 
 """
 import time
-
+from threading import Thread
 import robotserialcontrol.DigitalServoDriver as DsD
 import serial
+import math
 
 
 def singleton(cls, *args, **kw):
@@ -34,25 +35,63 @@ def singleton(cls, *args, **kw):
     return _singleton
 
 
-# @singleton
-class ControlDriver(object):
+@singleton
+class ControlDriver(Thread):
 
-    def __init__(self, radius_wheel=52.55, flag_end=0):
-        driver = DsD.DigitalServoDriver()
+    def __init__(self, radius_wheel=52.55, flag_end=0, radius=74, left_right=0):
+        Thread.__init__(self)
+        driver = DsD.DigitalServoDriver(left_right=left_right)
+        self.left_right = left_right
         baud_rate = driver.baud_rate
-        self.ser_l = serial.Serial(driver.left, baud_rate, timeout=None)
         self.ser_r = serial.Serial(driver.right, baud_rate, timeout=None)
+        self.ser_l = serial.Serial(driver.left, baud_rate, timeout=None)
+        self.radius_wheel = radius_wheel
         self.flag_end = flag_end
-        self.speed = 50
-        return
+        self.radius = radius
+        self.speed = 0
+        self.omega = 0.08
 
-    def get_rpm(self):
-        rpm_hex = int(self.speed / 6000 * 16384)
-        # print(rpm_hex)
-        rpm = [(rpm_hex & 0xFF00) >> 8, (rpm_hex & 0x00FF)]
-        return rpm
+    def get_rpm_byte(self, rpm):
+        rpm_byte = [0x06, 0x00, 0x88, 0x8e]
+        # print(rpm)
+        rpm_hex = int(rpm / 6000 * 16384)
+        if rpm_hex > 0:
+            rpm = [(rpm_hex & 0xFF00) >> 8, (rpm_hex & 0x00FF)]
+        else:
+            temp = 0xFFFF
+            rpm_hex = temp + rpm_hex
+            rpm = [(rpm_hex & 0xFF00) >> 8, (rpm_hex & 0x00FF)]
+        rpm_byte[1] = rpm[0]
+        rpm_byte[2] = rpm[1]
+        rpm_byte.pop(3)
+        last = 0
+        for item in rpm_byte:
+            last = last + item
+        if last > 256:
+            last = last & 0xFF
+        rpm_byte.append(last)
+        return rpm_byte
 
-    @staticmethod
+    def get_speed_rpm(self, w):
+        rpm = (self.speed + w) / (2 * math.pi * self.radius_wheel / 1000) * 60
+        # print(int(rpm))
+        return int(rpm)
+
+    def get_rpm_Omega(self):
+        """
+        r * w = v = l (vr + vl)
+                    -----------
+                    2 (vr - vl)
+        :return:
+        """
+        if self.omega > 0:
+            vl = (self.radius - (74 / 2)) / 100 * self.omega
+            vr = (self.radius + (74 / 2)) / 100 * self.omega
+        else:
+            vl = -(self.radius + (74 / 2)) / 100 * self.omega
+            vr = -(self.radius - (74 / 2)) / 100 * self.omega
+        return vl, vr
+
     def control_part(self):
         print("start control part")
         start = [0x00, 0x00, 0x01, 0x01]
@@ -65,17 +104,17 @@ class ControlDriver(object):
         self.ser_r.write(bytes(pc_mode))
 
         while True:
-            temp = self.get_rpm()
-            rpm[1] = temp[0]
-            rpm[2] = temp[1]
-            rpm.pop(3)
-            sum = 0
-            for item in rpm:
-                sum = sum + item
-            rpm.append(sum)
-            print(rpm)
-            self.ser_l.write(bytes(rpm))
-            self.ser_r.write(bytes([0x06, 0x00, 0x88, 0x8e]))
+            vl, vr = self.get_rpm_Omega()
+            print(vl, vr)
+            if self.left_right == 1:
+                left = self.get_rpm_byte(self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed))
+                right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
+            else:
+                left = self.get_rpm_byte((self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed)))
+                right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
+            # print(right)
+            self.ser_l.write(bytes(left))
+            self.ser_r.write(bytes(right))
             time.sleep(0.5)
             watch = [0x80, 0x00, 0x80]
             self.ser_l.write(bytes(watch))
@@ -85,39 +124,22 @@ class ControlDriver(object):
 
         self.ser_l.write(bytes(end))
         self.ser_r.write(bytes(end))
+        return
+
+    def run(self):
+        self.control_part()
 
     pass
 
 
-# cd = ControlDriver()
-
 if __name__ == '__main__':
-    from multiprocessing import Process
-    import multiprocessing
-
-
-    # pool = multiprocessing.Pool(processes=1)
-    def loop(control):
-        # while True:
-        print("start loop")
+    def loop(cd):
         time.sleep(10)
-        print("end")
-        # control.flag_end = 1
-        # temp = input("num")
-        # if temp == -1:
-        #     control.flag_end = 1
-        #     break
-        # control.speed = temp
+        cd.flag_end = 1
 
 
-    # pool.apply(func=loop(cd))
-    # pool.apply(func=cd.control_part())
-    # pool.close()
-    # pool.join()
-    #
-    # p = Process(target=loop(cd))
     cd = ControlDriver()
-    p2 = Process(target=ControlDriver.control_part, args=())
-    # p.start()
-    p2.start()
-    # cd.control_part()
+    t1 = Thread(target=loop, args=(cd,))
+
+    cd.start()
+    t1.start()
