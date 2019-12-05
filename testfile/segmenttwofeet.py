@@ -19,26 +19,36 @@ import cv2 as cv
 import ProcessFunc as pf
 
 image, contours = pf.get_contours('../resource/enlarge-original.jpg', 97)
-# cv.drawContours(image, contours, -1, (255, 0, 0), 3)
+cv.drawContours(image, contours, -1, (255, 0, 0), 3)
 cv.imshow('img-gray', image)
 
-cnt = contours[1]
-print(cv.contourArea(cnt))
-print(image.shape[0])
-pf.select_contours(image, contours)
-for item in contours:
-    print(len(item))
+sorted_point = sorted(contours, key=lambda x: len(x), reverse=True)
+for c in contours:
+    print("length:", len(c))
 
-point = pf.get_convexity_point(cnt)
-left, right = pf.segmentation_two_feet(image, point)
+for c in sorted_point:
+    print("length:", len(c))
+
+cnt = contours[1]
+# print(cv.contourArea(cnt))
+# print(image.shape[0])
+foot = []
+foot = pf.select_contours(image, contours)
+print(len(foot))
+for item in foot:
+    print("after", len(item))
+    pf.draw_normal_rectangle(image, item)
+    pf.draw_min_rectangle(image, item)
+
+# for item in contours:
+#     print(len(item))
+
+# point = pf.get_convexity_point(cnt)
+# left, right = pf.segmentation_two_feet(image, point)
 # print(left)
 # print(pf.bigger_y(right))
 
 
-pf.draw_normal_rectangle(image, left)
-pf.draw_normal_rectangle(image, right)
-pf.draw_min_rectangle(image, left)
-pf.draw_min_rectangle(image, right)
 # foot = []
 # for a in hull:
 #     if a[0][1] > 100:

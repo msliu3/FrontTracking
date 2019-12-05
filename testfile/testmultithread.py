@@ -21,11 +21,24 @@ import robotserialcontrol.ControlDriver as CD
 def loop(control):
     while True:
         time.sleep(5)
-        temp = input("num")
+        temp = input("type: a->speed b->omega c->r clear")
+        if temp == "a":
+            speed = input("speed")
+            control.speed = float(speed)
+        elif temp == "b":
+            omega = input("omega")
+            control.omega = float(omega)
+        elif temp == "c":
+            r = input("radius")
+            control.radius = float(r)
+        elif temp == "clear":
+            control.omega=0
+            control.speed=0
+            control.radius = 0
+
         if temp == -1:
             control.flag_end = 1
             break
-        control.speed = float(temp)
 
 
 if __name__ == '__main__':

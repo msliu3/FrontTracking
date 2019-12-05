@@ -51,9 +51,16 @@ class DemonProcess(object):
 
         return True
 
-    def demonstrate_data(self, ir_data, zoom_filter=Image.BILINEAR):
+    def demonstrate_data(self, ir_data, filter_list, filter_num=5, zoom_filter=Image.BILINEAR):
         """
-
+            接收一帧（1540*2个字节，32x24=768 （768+2）x2 = 1540）数据，
+            数据的物理意义是温度，一个32*24的温度矩阵
+            根据温度的取值范围映射成图像（0-255）
+            再根据放大滤镜，放大一定倍数
+            ------------------------------------------------------------
+            其中在拿到数据之后，用了一个IIR滤波器，跟之前帧的数据取平均值
+        :param filter_num:
+        :param filter_list:
         :param zoom_filter: Image.HAMMING or Image.BILINEAR
         :param ir_data: is a string whose length is
         :return:
@@ -61,6 +68,8 @@ class DemonProcess(object):
         if len(ir_data) != 1540 * 2:
             # 正常传过来一个字节 0xa5 是一个字节，一个元素表示4位， 然后用string表示一个字母就是一个字节
             print("the array of ir_data is not 1540", len(ir_data))
+        else:
+            return None, None
 
         temperature = []
         temp_data = []
@@ -71,18 +80,24 @@ class DemonProcess(object):
         self.__fix_pixel(temp_data, 6, 9)
         for i in temp_data:
             temperature.append(int(i))
-        maxtemp = max(temp_data)
-        mintemp = min(temp_data)
+        max_temp = max(temp_data)
+        min_temp = min(temp_data)
+
+        filter_list.append(np.array(temp_data).reshape(24, 32))
+
+        if len(filter_list) > filter_num:
+            filter_list.pop(0)
+        temp_data = pf.filter_for_ir(filter_list).tolist()[0]
 
         for i in range(len(temp_data)):
-            temp_data[i] = int((temp_data[i] - mintemp) / (maxtemp - mintemp) * 255)
+            temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
             # temp_data[i] = int((temp_data[i] - 5) / (45 - 10) * 255)
 
-        npdata = np.array(temp_data).reshape(24, 32)
+        np_data = np.array(temp_data).reshape(24, 32)
         temperature = np.array(temperature, np.float32).reshape(24, 32)
 
         # zero = np.zeros((24,32))我希望是红蓝配色
-        rgbdata = np.array([npdata, npdata, npdata], np.uint8).reshape(3, -1)
+        rgbdata = np.array([np_data, np_data, np_data], np.uint8).reshape(3, -1)
         rgbdata = rgbdata.T.reshape(24, 32, 3)
         image2 = Image.fromarray(rgbdata)
 
@@ -130,10 +145,36 @@ class DemonProcess(object):
         :return:
         """
         gary = cv.cvtColor(np_ir, cv.COLOR_BGR2GRAY)
-        ret, thresh = cv.threshold(gary, 127, 255, 0)
+        ret, thresh = cv.threshold(gary, 107, 255, 0)
         contours, hierarchy = cv.findContours(thresh, 1, 2)
         cv.drawContours(np_ir, contours, -1, (255, 0, 0), 3)
         return np_ir, contours
+
+    def find_foot_ankle(self, np_ir, contours):
+        foot = []
+        foot = pf.select_contours(np_ir, contours)
+
+        if len(foot) == 2:
+            print("have foot  ")
+            for item in foot:
+                rect = pf.draw_min_rectangle(np_ir, item)
+
+                pf.draw_min_line(np_ir, item)
+
+                x, y = pf.draw_normal_rectangle(np_ir, item)
+
+                if x < (32 * self.scope) / 2:
+                    cv.putText(np_ir, str(int(90 + rect[2])), (100, 100), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 255),
+                               2,
+                               cv.LINE_AA)
+                else:
+                    cv.putText(np_ir, str(int(- rect[2])), (32 * self.scope - 500, 100), cv.FONT_HERSHEY_SIMPLEX, 2,
+                               (255, 255, 255), 1,
+                               cv.LINE_AA)
+
+            return item
+        else:
+            return
 
     def find_foot(self, np_ir, contours):
         big_pattern = []
@@ -220,6 +261,8 @@ if __name__ == '__main__':
     dp = DemonProcess()
     head = []
     data = []
+    filter_data = []
+    rest_num = 5
     while True:
         s = dp.serial.read(1).hex()
         if s != "":
@@ -235,10 +278,12 @@ if __name__ == '__main__':
                 head.pop(0)
 
             # 将读到的数据进行展示
-            if len(data) == 5:
-                temp, ir_np = dp.demonstrate_data(data[4])
+            if len(data) == rest_num:
+                temp, ir_np = dp.demonstrate_data(data[rest_num - 1], filter_data, filter_num=3)
+                # filter_data.append(temp)
+                # print("out",len(filter_data))
                 ir_np, contours = dp.binary_image(ir_np)
-                dp.find_foot(ir_np, contours)
-                if dp.demo_record(ir_np) == -1:  # , 'frame-by-frame'
+                dp.find_foot_ankle(ir_np, contours)
+                if dp.demo_record(ir_np, mode='continuous') == -1:  # , 'frame-by-frame'
                     break
-                data.pop(4)
+                data.pop(rest_num - 1)

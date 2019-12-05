@@ -31,15 +31,39 @@ def get_contours(filename, threshhold=97):
 def select_contours(img, contours):
     cnt_list = []
     image_area = img.shape[0] * img.shape[1]
+    print("total:", image_area)
     for item in contours:
         area = cv.contourArea(item)
         rate = area / image_area
         print("area:", area, "rate", area / image_area)
-        if rate > 0.8:
-            cnt_list.append(area)
+        if 0.06 < rate < 0.3:
+            cnt_list.append(item)
+
+    # if len(cnt_list) >3:
+    #     return None
+
     if len(cnt_list) == 1:
-        cnt_list = segmentation_two_feet(cnt_list)
-    return cnt_list
+        print("only one")
+        point = get_convexity_point(cnt_list[0])
+        l, r = segmentation_two_feet(img, point)
+        cnt_list.pop(0)
+        cnt_list.append(l)
+        cnt_list.append(r)
+        return cnt_list
+
+    if len(cnt_list) == 2:
+        print("two")
+        temp = []
+        for item in cnt_list:
+            foot = get_foot_ankle(item)
+            temp.append(foot)
+        cnt_list = temp
+        return cnt_list
+    else:
+        cnt_list.append(1)
+        cnt_list.append(2)
+        cnt_list.append(3)
+        return cnt_list
 
 
 def segmentation_two_feet(img, convex_point):
@@ -47,38 +71,22 @@ def segmentation_two_feet(img, convex_point):
     segment_point_y = convex_point[0][0][1]
     left_foot = np.array(img[segment_point_y:img.shape[0], 0:segment_point_x])
     image, contours = get_contours(left_foot, threshhold=127)
-    point = get_convexity_point(contours[0], image)
-    segment_l = [np.array(point[0][0]).reshape((1, 2)), np.array(point[1][0]).reshape((1, 2))]
-    hull = cv.convexHull(contours[0])
-    left = []
-    y = bigger_y(segment_l)
-    for i in hull:
-        if i[0][1] > y:
-            left.append(i)
-    left.append(segment_l[0])
-    left.append(segment_l[1])
+    sorted_point = sorted(contours, key=lambda x: len(x), reverse=True)
+    left = get_foot_ankle(sorted_point[0])
 
     right_foot = np.array(img[segment_point_y:img.shape[0], segment_point_x:img.shape[1]])
     image, contours = get_contours(right_foot, threshhold=127)
-    # 这块有问题
-    point = get_convexity_point(contours[1], image)
-    segment_r = [np.array(point[0][0]).reshape((1, 2)), np.array(point[1][0]).reshape((1, 2))]
-    hull = cv.convexHull(contours[1])
-    right = []
-    y = bigger_y(segment_r)
-    for i in hull:
-        if i[0][1] > y:
-            right.append(i)
-    right.append(segment_r[0])
-    right.append(segment_r[1])
+
+    sorted_point = sorted(contours, key=lambda x: len(x), reverse=True)
+    right = get_foot_ankle(sorted_point[0])
     for i in range(len(right)):
         right[i][0][0] += segment_point_x
     # cv.imwrite("../resource/temp.jpg", left_foot)
     # cv.drawContours(image, contours, -1, (255, 0, 0), 3)
     # cv.imwrite("../resource/temp-contours.jpg", left_foot)
-    cv.imshow("temp", image)
+    # cv.imshow("temp", image)
 
-    return np.array(left), np.array(right)
+    return left, np.array(right)
 
 
 def bigger_y(point):
@@ -105,7 +113,7 @@ def get_convexity_point(cnt, img=None):
         far = tuple(cnt[f][0])
         cv.circle(img, far, 5, [0, 0, 255], -1)
     sorted_point = sorted(point.items(), key=lambda x: x[1], reverse=True)
-    print(sorted_point)
+    # print(sorted_point)
     return sorted_point
 
 
@@ -134,3 +142,37 @@ def draw_min_line(img, np_point, color=(0, 0, 255)):
     righty = int(((cols - x) * vy / vx) + y)
     cv.line(img, (cols - 1, righty), (0, lefty), (0, 255, 0), 2)
     return
+
+
+def filter_for_ir(data_list):
+    """
+
+    :param data_list:
+    :param np_ir:
+    :param last_data_list: [[data1],
+                             [data2],
+                             ... ...
+                             [data-n]}
+    :return:
+    """
+    n_layer = len(data_list)
+    np_sum = np.array(np.zeros(data_list[0].shape))
+    for item in data_list:
+        np_sum += item
+    # print("result:", np_sum / n_layer)
+    # print("inner",n_layer)
+    return (np_sum / n_layer).reshape((1, -1))
+
+
+def get_foot_ankle(cnt):
+    point = get_convexity_point(cnt)
+    ankle = [np.array(point[0][0]).reshape((1, 2)), np.array(point[1][0]).reshape((1, 2))]
+    hull = cv.convexHull(cnt)
+    foot = []
+    y = bigger_y(ankle)
+    for i in hull:
+        if i[0][1] > y:
+            foot.append(i)
+    foot.append(ankle[0])
+    foot.append(ankle[1])
+    return np.array(foot)
