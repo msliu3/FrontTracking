@@ -15,6 +15,7 @@
 import numpy as np
 import cv2 as cv
 import sys
+import math
 
 
 def get_contours(filename, threshhold=97):
@@ -124,7 +125,7 @@ def draw_three(image, cnt_list):
 def draw_normal_rectangle(img, np_point, color=(0, 0, 255)):
     x, y, w, h = cv.boundingRect(np_point)
     cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
-    return x, y
+    return x, y, w, h
 
 
 def draw_min_rectangle(img, np_point, color=(0, 0, 255)):
@@ -141,7 +142,12 @@ def draw_min_line(img, np_point, color=(0, 0, 255)):
     lefty = int((-x * vy / vx) + y)
     righty = int(((cols - x) * vy / vx) + y)
     cv.line(img, (cols - 1, righty), (0, lefty), (0, 255, 0), 2)
-    return
+    h = math.atan((lefty - righty) / (0 - cols + 1))
+    angle = math.degrees(h)
+    # print("rows: %d cols: %d" % (rows, cols))
+    # print("k: %f" % ((lefty - righty) / (0 - cols + 1)))
+    # print("degree: %f" % angle)
+    return angle
 
 
 def filter_for_ir(data_list):

@@ -15,13 +15,14 @@
 
 import numpy as np
 import cv2 as cv
+import ProcessFunc as pf
 
 img = cv.imread('../resource/enlarge-original.jpg', 0)
 img2 = cv.imread('../resource/segment.jpg', 1)
 # enlarge-original.jpg
 
-img_gray = cv.cvtColor(img2, cv.COLOR_BGR2GRAY)
-ret, thresh = cv.threshold(img_gray, 127, 255, 0)
+# img_gray = cv.cvtColor(img2, cv.COLOR_BGR2GRAY)
+ret, thresh = cv.threshold(img, 127, 255, 0)
 
 contours, hierarchy = cv.findContours(thresh, 2, 1)
 
@@ -39,7 +40,7 @@ for cnt in contours:
         far = tuple(cnt[f][0])
         cv.circle(img2, far, 5, [0, 0, 255], -1)
     sorted_point = sorted(two.items(), key=lambda x: x[1], reverse=True)
-    print(sorted_point)
+    # print(sorted_point)
     hull = cv.convexHull(cnt)
     foot = []
     for a in hull:
@@ -53,9 +54,13 @@ for cnt in contours:
     cv.rectangle(img2, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
     rect = cv.minAreaRect(np.array(foot))
+    for item in rect:
+        print(item)
     box = cv.boxPoints(rect)
     box = np.int0(box)
-    cv.drawContours(img2, [box], 0, (0, 0, 255), 2)
-cv.imshow('img', img2)
+    cv.drawContours(img, [box], 0, (0, 0, 255), 2)
+    l, r = pf.draw_min_line(img, np.array(foot))
+    print(l,r)
+cv.imshow('img', img)
 cv.waitKey(0)
 cv.destroyAllWindows()

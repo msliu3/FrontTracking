@@ -68,8 +68,6 @@ class DemonProcess(object):
         if len(ir_data) != 1540 * 2:
             # 正常传过来一个字节 0xa5 是一个字节，一个元素表示4位， 然后用string表示一个字母就是一个字节
             print("the array of ir_data is not 1540", len(ir_data))
-        else:
-            return None, None
 
         temperature = []
         temp_data = []
@@ -90,8 +88,8 @@ class DemonProcess(object):
         temp_data = pf.filter_for_ir(filter_list).tolist()[0]
 
         for i in range(len(temp_data)):
-            temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
-            # temp_data[i] = int((temp_data[i] - 5) / (45 - 10) * 255)
+            # temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
+            temp_data[i] = int((temp_data[i] - 5) / (45 - 10) * 255)
 
         np_data = np.array(temp_data).reshape(24, 32)
         temperature = np.array(temperature, np.float32).reshape(24, 32)
@@ -155,13 +153,23 @@ class DemonProcess(object):
         foot = pf.select_contours(np_ir, contours)
 
         if len(foot) == 2:
-            print("have foot  ")
+            # print("have foot")
+
             for item in foot:
                 rect = pf.draw_min_rectangle(np_ir, item)
+                """
+                    rect = cv.minAreaRect()
+                    最小外接矩形，返回值为一个数组
+                    rect[ 0 ] : 中心点 x,y
+                    rect[ 1 ] : size width and height
+                    rect[ 2 ] : angle
+                        向右倾斜，贯穿一二三相线 为 正值
+                        向左倾斜，贯穿一二四相线 为 负值
+                """
 
                 pf.draw_min_line(np_ir, item)
 
-                x, y = pf.draw_normal_rectangle(np_ir, item)
+                x, y, w, h = pf.draw_normal_rectangle(np_ir, item)
 
                 if x < (32 * self.scope) / 2:
                     cv.putText(np_ir, str(int(90 + rect[2])), (100, 100), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 255),
@@ -279,10 +287,10 @@ if __name__ == '__main__':
 
             # 将读到的数据进行展示
             if len(data) == rest_num:
-                temp, ir_np = dp.demonstrate_data(data[rest_num - 1], filter_data, filter_num=3)
+                temp, ir_np = dp.demonstrate_data(data[rest_num - 1], filter_data, filter_num=2)
                 # filter_data.append(temp)
                 # print("out",len(filter_data))
-                ir_np, contours = dp.binary_image(ir_np)
+                ir_np, contours = dp.binary_image(np.array(ir_np))
                 dp.find_foot_ankle(ir_np, contours)
                 if dp.demo_record(ir_np, mode='continuous') == -1:  # , 'frame-by-frame'
                     break

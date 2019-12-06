@@ -15,7 +15,7 @@ None
 
 import threading
 import time
-import robotserialcontrol.ControlDriver as CD
+import DigitalDriver.ControlDriver as CD
 
 
 def loop(control):

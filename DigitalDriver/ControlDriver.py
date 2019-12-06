@@ -19,7 +19,7 @@
 """
 import time
 from threading import Thread
-import robotserialcontrol.DigitalServoDriver as DsD
+import DigitalDriver.DigitalServoDriver as DsD
 import serial
 import math
 
