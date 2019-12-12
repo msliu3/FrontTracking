@@ -143,7 +143,7 @@ class DemonProcess(object):
         :return:
         """
         gary = cv.cvtColor(np_ir, cv.COLOR_BGR2GRAY)
-        ret, thresh = cv.threshold(gary, 107, 255, 0)
+        ret, thresh = cv.threshold(gary, 127, 255, 0)
         contours, hierarchy = cv.findContours(thresh, 1, 2)
         cv.drawContours(np_ir, contours, -1, (255, 0, 0), 3)
         return np_ir, contours

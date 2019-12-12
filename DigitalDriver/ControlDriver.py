@@ -56,7 +56,8 @@ class ControlDriver(Thread):
         rpm_byte = [0x06, 0x00, 0x88, 0x8e]
         # print(rpm)
         rpm_hex = int(rpm / 6000 * 16384)
-        if rpm_hex > 0:
+        # print(rpm_hex)
+        if rpm_hex >= 0:
             rpm = [(rpm_hex & 0xFF00) >> 8, (rpm_hex & 0x00FF)]
         else:
             temp = 0xFFFF
@@ -106,25 +107,30 @@ class ControlDriver(Thread):
 
         while True:
             vl, vr = self.get_rpm_Omega()
-            # print(vl, vr)
+            # print("Omega: %f %f" %( vl, vr))
+            # print("Speed: %f " % self.speed)
             if self.left_right == 1:
                 left = self.get_rpm_byte(self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed))
                 right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
             else:
+                # print((self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed)))
                 left = self.get_rpm_byte((self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed)))
                 right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
-            # print(right)
+            # print(left, right)
             self.ser_l.write(bytes(left))
             self.ser_r.write(bytes(right))
             time.sleep(0.5)
             watch = [0x80, 0x00, 0x80]
             self.ser_l.write(bytes(watch))
             self.ser_r.write(bytes(watch))
+
             if self.flag_end != 0:
                 break
 
         self.ser_l.write(bytes(end))
         self.ser_r.write(bytes(end))
+        time.sleep(20)
+
         return
 
     def run(self):
