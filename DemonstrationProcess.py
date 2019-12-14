@@ -74,35 +74,66 @@ class DemonProcess(object):
         for i in range(769):
             t = (int(ir_data[i * 4 + 2:i * 4 + 4], 16) * 256 + int(ir_data[i * 4:i * 4 + 2], 16)) / 100
             temp_data.append(t)
+
+        # print("demonstrate_data temp_data : %f" % temp_data[0])
         self.env = temp_data.pop()
-        self.__fix_pixel(temp_data, 6, 9)
+        temp_data = self.__fix_pixel(temp_data, 6, 9)
         for i in temp_data:
-            temperature.append(int(i))
+            temperature.append(i)
+
         max_temp = max(temp_data)
         min_temp = min(temp_data)
 
-        filter_list.append(np.array(temp_data).reshape(24, 32))
+        # max_temp = int(max(temp_data))
+        # min_temp = int(min(temp_data))
 
-        if len(filter_list) > filter_num:
-            filter_list.pop(0)
-        temp_data = pf.filter_for_ir(filter_list).tolist()[0]
+        # print("demonstrate_data : %f and %f"%(max_temp,min_temp))
 
+        # 这有问题会导致某个点出现异常
+        # filter_list.append(np.array(temp_data).reshape(24, 32))
+        # if len(filter_list) > filter_num:
+        #     filter_list.pop(0)
+        # temp_data = pf.filter_for_ir(filter_list).tolist()[0]
+
+        is_foot = pf.detect_is_foot(temperature)
+        if not is_foot:
+            return None, None, False
+
+        result, flag = pf.k_means_detect(temperature)
+        # print("foot is %d" % flag)
         for i in range(len(temp_data)):
-            # temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
-            temp_data[i] = int((temp_data[i] - 5) / (45 - 10) * 255)
+            # change =temp_data[i]
+            # if result[i] == flag:
+            #     temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
+            # else:
+            #     temp_data[i] = int((temp_data[i] - 5 - min_temp) / (max_temp - min_temp) * 255)
+
+            temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
+
+            # if temp_data[i] == 0:
+            # print("test: %f"%change)
+
+            # temp_data[i] = int((temp_data[i] - 5) / (45 - 10) * 25 5)
+            # temperature[i] = int((temperature[i] - min_temp) / (max_temp - min_temp) * 255)
 
         np_data = np.array(temp_data).reshape(24, 32)
+        # np_data = np.array(temperature).reshape(24, 32)
         temperature = np.array(temperature, np.float32).reshape(24, 32)
 
         # zero = np.zeros((24,32))我希望是红蓝配色
         rgbdata = np.array([np_data, np_data, np_data], np.uint8).reshape(3, -1)
         rgbdata = rgbdata.T.reshape(24, 32, 3)
+
+        rgbdata = pf.image_processing_mean_filter(rgbdata, kernel_num=2)
+        # rgbdata = cv.medianBlur(rgbdata,7)
+        # rgbdata = cv.GaussianBlur(rgbdata, (3, 3), 0)
+
         image2 = Image.fromarray(rgbdata)
 
         im = image2.resize((32 * self.scope, 24 * self.scope), zoom_filter)
         array = np.array(im)
 
-        return temperature, array
+        return temperature, array, True
 
     def __fix_pixel(self, ir_list=[], x=6, y=9):
         """
@@ -124,7 +155,6 @@ class DemonProcess(object):
                 ir_list[x + 1 + (y + 1) * 32]) / 8
         ir_list.insert(x + y * 32, temp)
         ir_list.pop(x + y * 32 + 1)
-
         return ir_list
 
     def analysis_foot(self):
@@ -249,7 +279,8 @@ class DemonProcess(object):
         """
 
         # 在这里考虑一下如何，可以既填数又填string
-
+        cv.namedWindow("The IR data", 0)
+        cv.resizeWindow("The IR data", 32 * 30, 24 * 30)
         cv.imshow("The IR data", np_ir)
         self.out.write(np_ir)
         if cv.waitKey(1) == ord('q'):
@@ -287,11 +318,20 @@ if __name__ == '__main__':
 
             # 将读到的数据进行展示
             if len(data) == rest_num:
-                temp, ir_np = dp.demonstrate_data(data[rest_num - 1], filter_data, filter_num=2)
-                # filter_data.append(temp)
-                # print("out",len(filter_data))
-                ir_np, contours = dp.binary_image(np.array(ir_np))
-                dp.find_foot_ankle(ir_np, contours)
-                if dp.demo_record(ir_np, mode='continuous') == -1:  # , 'frame-by-frame'
-                    break
+                temp, ir_np, foot = dp.demonstrate_data(data[rest_num - 1], filter_data,
+                                                        filter_num=2)  # ,zoom_filter=Image.HAMMING
+                # pf.show_temperature(temp)
+                # ir_np = pf.draw_hist(ir_np)
+                if foot:
+                    ir_np = pf.image_processing_mean_filter(ir_np,kernel_num=5)
+                    # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.7)
+                    ir_np, contours = dp.binary_image(np.array(ir_np))
+                    dp.find_foot_ankle(ir_np, contours)
+                    if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
+                        break
+
+                # ir_np, contours = dp.binary_image(np.array(ir_np))
+                # dp.find_foot_ankle(ir_np, contours)
+                # if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
+                #     break
                 data.pop(rest_num - 1)

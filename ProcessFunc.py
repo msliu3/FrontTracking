@@ -16,6 +16,8 @@ import numpy as np
 import cv2 as cv
 import sys
 import math
+from matplotlib import pyplot as plt
+from sklearn.cluster import KMeans
 
 
 def get_contours(filename, threshhold=97):
@@ -37,20 +39,20 @@ def select_contours(img, contours):
         area = cv.contourArea(item)
         rate = area / image_area
         print("area:", area, "rate", area / image_area)
-        if 0.06 < rate < 0.3:
+        if 0.01 < rate:
             cnt_list.append(item)
 
     # if len(cnt_list) >3:
     #     return None
 
-    if len(cnt_list) == 1:
-        print("only one")
-        point = get_convexity_point(cnt_list[0])
-        l, r = segmentation_two_feet(img, point)
-        cnt_list.pop(0)
-        cnt_list.append(l)
-        cnt_list.append(r)
-        return cnt_list
+    # if len(cnt_list) == 1:
+    #     print("only one")
+    #     point = get_convexity_point(cnt_list[0])
+    #     l, r = segmentation_two_feet(img, point)
+    #     cnt_list.pop(0)
+    #     cnt_list.append(l)
+    #     cnt_list.append(r)
+    #     return cnt_list
 
     if len(cnt_list) == 2:
         print("two")
@@ -182,3 +184,79 @@ def get_foot_ankle(cnt):
     foot.append(ankle[0])
     foot.append(ankle[1])
     return np.array(foot)
+
+
+def draw_hist(np_ir):
+    histr = cv.calcHist([np_ir], [0], None, [256], [0, 256])
+    plt.plot(histr, color="r")
+    plt.xlim([0, 256])
+    plt.show()
+    return np_ir
+
+
+def image_processing_mean_filter(np_ir, kernel_num=2):
+    kernel = np.ones((kernel_num, kernel_num), np.float) / (kernel_num ** 2)
+    res = cv.filter2D(np_ir, -1, kernel)
+    return res
+
+
+def image_processing_contrast_brightness(img, alpha, beta):
+    blank = np.zeros(img.shape, img.dtype)
+    # dst = alpha * img + beta * blank
+    dst = cv.addWeighted(img, alpha, blank, 1 - alpha, beta)
+    return dst
+
+
+def show_temperature(temperature):
+    print()
+    for i in range(24):
+        t = temperature[i]
+        for j in range(32):
+            print("%.2f" % t[j], end=" ")
+        print()
+    # print(temperature[0])
+
+    pass
+
+
+def detect_is_foot(temperature):
+    num = 0
+    for item in temperature:
+        if item >= 19:
+            num += 1
+    # print("bigger than 20 ", num)
+    if num > 40:
+        print("have foot")
+        return True
+    else:
+        print("No foot")
+        return False
+
+
+def k_means_detect(temperature):
+    temp_np = np.array(temperature).reshape((len(temperature), 1))
+    # print(temp_np.shape)
+    result = KMeans(n_clusters=2).fit_predict(temp_np)
+
+    # result1 = np.array(result).reshape(24, 32)
+    # show_temperature(result1)
+    # 脚的平均温度值应该比空白地方高
+    temp0 = 0.0
+    num0 = 0
+    temp1 = 0.0
+    num1 = 0
+    for i in range(len(temperature)):
+        if result[i] == 0:
+            temp0 += temperature[i]
+            num0 += 1
+        else:
+            temp1 += temperature[i]
+            num1 += 1
+    temp0 = temp0 / num0
+    temp1 = temp1 / num1
+
+    if temp0 > temp1:
+        return result, 0
+    else:
+        return result, 1
+    # pass

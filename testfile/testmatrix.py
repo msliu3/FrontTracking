@@ -29,3 +29,10 @@ for item in temp:
 print(sum_np / len(temp))
 list_ave = pf.filter_for_ir(temp)
 print(list_ave.tolist()[0])
+
+print("-------------------------------")
+test1 = dict()
+test2 = {"a": 1, "b": 2}
+print(test2,test1)
+test1 = test2
+print(test1)
