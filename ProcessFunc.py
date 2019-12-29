@@ -34,11 +34,11 @@ def get_contours(filename, threshhold=97):
 def select_contours(img, contours):
     cnt_list = []
     image_area = img.shape[0] * img.shape[1]
-    print("total:", image_area)
+    # print("total:", image_area)
     for item in contours:
         area = cv.contourArea(item)
         rate = area / image_area
-        print("area:", area, "rate", area / image_area)
+        # print("area:", area, "rate", area / image_area)
         if 0.01 < rate:
             cnt_list.append(item)
 
@@ -55,7 +55,7 @@ def select_contours(img, contours):
     #     return cnt_list
 
     if len(cnt_list) == 2:
-        print("two")
+        # print("two")
         temp = []
         for item in cnt_list:
             foot = get_foot_ankle(item)
@@ -139,6 +139,16 @@ def draw_min_rectangle(img, np_point, color=(0, 0, 255)):
 
 
 def draw_min_line(img, np_point, color=(0, 0, 255)):
+    """
+
+    :param img:
+    :param np_point:
+    :param color:
+    :return: angle
+        向右倾斜，贯穿一二三相线 为 负值
+        向左倾斜，贯穿一二四相线 为 正值
+        成角都是和水平线的成角
+    """
     rows, cols = img.shape[:2]
     [vx, vy, x, y] = cv.fitLine(np_point, cv.DIST_L2, 0, 0.01, 0.01)
     lefty = int((-x * vy / vx) + y)
@@ -219,44 +229,64 @@ def show_temperature(temperature):
     pass
 
 
-def detect_is_foot(temperature):
+def detect_is_foot(temperature, temp_threshold=20):
+    """
+    这个函数的目的是，通过判断超过某一温度的个数，来判断该图中是否含有“脚”
+    :param temperature:
+    :return:
+    """
     num = 0
     for item in temperature:
         if item >= 19:
             num += 1
     # print("bigger than 20 ", num)
     if num > 40:
-        print("have foot")
+        # print("have foot")
         return True
     else:
-        print("No foot")
+        # print("No foot")
         return False
 
 
 def k_means_detect(temperature):
+    """
+    这个函数的目的是，使用聚类算法（k-means）去判断原始的温度矩阵中，哪些点属于人的身体，那些点属于环境
+    已有的知识分类：“身体”点温度 > 环境点温度
+
+    btw，注意这里传入的参数是list，并不是转成图片数据后的结果，如果想要打印结果需要转成np.reshape
+    :param temperature:温度的list
+    :return: 返回list ， list（reslut）， falg（身体的结果0 or 1）
+    """
     temp_np = np.array(temperature).reshape((len(temperature), 1))
     # print(temp_np.shape)
     result = KMeans(n_clusters=2).fit_predict(temp_np)
 
+    # 以图片方式print result
     # result1 = np.array(result).reshape(24, 32)
     # show_temperature(result1)
+
     # 脚的平均温度值应该比空白地方高
     temp0 = 0.0
     num0 = 0
     temp1 = 0.0
     num1 = 0
+    env_max0 = 0.0
+    env_max1 = 0.0
     for i in range(len(temperature)):
         if result[i] == 0:
+            if env_max0 < temperature[i]:
+                env_max0 = temperature[i]
             temp0 += temperature[i]
             num0 += 1
         else:
+            if env_max1 < temperature[i]:
+                env_max1 = temperature[i]
             temp1 += temperature[i]
             num1 += 1
     temp0 = temp0 / num0
     temp1 = temp1 / num1
 
     if temp0 > temp1:
-        return result, 0
+        return result, 0, env_max1
     else:
-        return result, 1
-    # pass
+        return result, 1, env_max0

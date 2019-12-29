@@ -38,7 +38,7 @@ def singleton(cls, *args, **kw):
 @singleton
 class ControlDriver(Thread):
 
-    def __init__(self, radius_wheel=85.00, flag_end=0, radius=54, left_right=0):
+    def __init__(self, radius_wheel=85.00, flag_end=0, radius=0, left_right=0):
         # radius_wheel = 52.55
         Thread.__init__(self)
         driver = DsD.DigitalServoDriver(left_right=left_right)
@@ -50,7 +50,7 @@ class ControlDriver(Thread):
         self.flag_end = flag_end
         self.radius = radius
         self.speed = 0
-        self.omega = 0.1
+        self.omega = 0
 
     def get_rpm_byte(self, rpm):
         rpm_byte = [0x06, 0x00, 0x88, 0x8e]
@@ -86,12 +86,13 @@ class ControlDriver(Thread):
                     2 (vr - vl)
         :return:
         """
-        if self.omega > 0:
-            vl = (self.radius - (74 / 2)) / 100 * self.omega
-            vr = (self.radius + (74 / 2)) / 100 * self.omega
+        if self.omega>0:
+            vl = (self.radius + (56 / 2)) / 100 * self.omega
+            vr = (self.radius - (56 / 2)) / 100 * self.omega
         else:
-            vl = -(self.radius - (74 / 2)) / 100 * self.omega
-            vr = +(self.radius + (74 / 2)) / 100 * self.omega
+            vl = -(self.radius - (56 / 2)) / 100 * self.omega
+            vr = -(self.radius + (56 / 2)) / 100 * self.omega
+
         return vl, vr
 
     def control_part(self):

@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image
 import cv2 as cv
 import ProcessFunc as pf
+import FootInformation as foot
 
 from IRCamera import IRCamera
 
@@ -32,6 +33,7 @@ class DemonProcess(object):
 
         self.out = cv.VideoWriter(output_path, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'), fps,
                                   (32 * self.scope, 24 * self.scope))
+        self.foot = foot.FootInformation()
         return
 
     def check_head_data(self, head_data):
@@ -75,21 +77,16 @@ class DemonProcess(object):
             t = (int(ir_data[i * 4 + 2:i * 4 + 4], 16) * 256 + int(ir_data[i * 4:i * 4 + 2], 16)) / 100
             temp_data.append(t)
 
-        # print("demonstrate_data temp_data : %f" % temp_data[0])
+        # 传感器返回给我的环境温度没什么参考性，肯能指的是传感器的工作环境温度，并不能帮助我做判断，这里直接pop掉
         self.env = temp_data.pop()
+
         temp_data = self.__fix_pixel(temp_data, 6, 9)
         for i in temp_data:
             temperature.append(i)
-
         max_temp = max(temp_data)
         min_temp = min(temp_data)
 
-        # max_temp = int(max(temp_data))
-        # min_temp = int(min(temp_data))
-
-        # print("demonstrate_data : %f and %f"%(max_temp,min_temp))
-
-        # 这有问题会导致某个点出现异常
+        # 这是一个时间上的FIR，问题在于均值之后会出现结果值大于最大值的情况
         # filter_list.append(np.array(temp_data).reshape(24, 32))
         # if len(filter_list) > filter_num:
         #     filter_list.pop(0)
@@ -99,36 +96,33 @@ class DemonProcess(object):
         if not is_foot:
             return None, None, False
 
-        result, flag = pf.k_means_detect(temperature)
+        result, flag, kmeans_env = pf.k_means_detect(temperature)
+        # print("kmeans env:", kmeans_env)
         # print("foot is %d" % flag)
         for i in range(len(temp_data)):
-            # change =temp_data[i]
-            # if result[i] == flag:
-            #     temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
-            # else:
-            #     temp_data[i] = int((temp_data[i] - 5 - min_temp) / (max_temp - min_temp) * 255)
+            if result[i] == flag:
+                temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 155) + 100
+            else:
+                temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 100)
 
-            temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
+            # temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
 
-            # if temp_data[i] == 0:
-            # print("test: %f"%change)
 
-            # temp_data[i] = int((temp_data[i] - 5) / (45 - 10) * 25 5)
-            # temperature[i] = int((temperature[i] - min_temp) / (max_temp - min_temp) * 255)
-
+        # list的顺序并不是图像顺序，需要reshape进行变形
         np_data = np.array(temp_data).reshape(24, 32)
         # np_data = np.array(temperature).reshape(24, 32)
         temperature = np.array(temperature, np.float32).reshape(24, 32)
 
         # zero = np.zeros((24,32))我希望是红蓝配色
-        rgbdata = np.array([np_data, np_data, np_data], np.uint8).reshape(3, -1)
-        rgbdata = rgbdata.T.reshape(24, 32, 3)
+        rgb_data = np.array([np_data, np_data, np_data], np.uint8).reshape(3, -1)
+        rgb_data = rgb_data.T.reshape(24, 32, 3)
 
-        rgbdata = pf.image_processing_mean_filter(rgbdata, kernel_num=2)
-        # rgbdata = cv.medianBlur(rgbdata,7)
-        # rgbdata = cv.GaussianBlur(rgbdata, (3, 3), 0)
+        # 分别是均值滤波器（当前使用）、中位数滤波器、高斯滤波器
+        rgb_data = pf.image_processing_mean_filter(rgb_data, kernel_num=2)
+        # rgb_data = cv.medianBlur(rgb_data,7)
+        # rgb_data = cv.GaussianBlur(rgb_data, (3, 3), 0)
 
-        image2 = Image.fromarray(rgbdata)
+        image2 = Image.fromarray(rgb_data)
 
         im = image2.resize((32 * self.scope, 24 * self.scope), zoom_filter)
         array = np.array(im)
@@ -161,7 +155,7 @@ class DemonProcess(object):
         theta_left, theta_right = -1, -1
         return theta_left, theta_right
 
-    def binary_image(self, np_ir):
+    def binary_image(self, np_ir, threshold=127):
         """
 
         threshold = 106可调
@@ -169,50 +163,63 @@ class DemonProcess(object):
 
         这个函数用来以后调这个值
 
+        :param threshold:
         :param np_ir:
         :return:
         """
         gary = cv.cvtColor(np_ir, cv.COLOR_BGR2GRAY)
-        ret, thresh = cv.threshold(gary, 127, 255, 0)
+        ret, thresh = cv.threshold(gary, threshold, 255, 0)
         contours, hierarchy = cv.findContours(thresh, 1, 2)
         cv.drawContours(np_ir, contours, -1, (255, 0, 0), 3)
         return np_ir, contours
 
     def find_foot_ankle(self, np_ir, contours):
-        foot = []
-        foot = pf.select_contours(np_ir, contours)
-
-        if len(foot) == 2:
-            # print("have foot")
-
-            for item in foot:
-                rect = pf.draw_min_rectangle(np_ir, item)
-                """
-                    rect = cv.minAreaRect()
-                    最小外接矩形，返回值为一个数组
-                    rect[ 0 ] : 中心点 x,y
-                    rect[ 1 ] : size width and height
-                    rect[ 2 ] : angle
-                        向右倾斜，贯穿一二三相线 为 正值
-                        向左倾斜，贯穿一二四相线 为 负值
-                """
-
-                pf.draw_min_line(np_ir, item)
-
-                x, y, w, h = pf.draw_normal_rectangle(np_ir, item)
-
-                if x < (32 * self.scope) / 2:
-                    cv.putText(np_ir, str(int(90 + rect[2])), (100, 100), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 255),
-                               2,
-                               cv.LINE_AA)
-                else:
-                    cv.putText(np_ir, str(int(- rect[2])), (32 * self.scope - 500, 100), cv.FONT_HERSHEY_SIMPLEX, 2,
-                               (255, 255, 255), 1,
-                               cv.LINE_AA)
-
-            return item
-        else:
-            return
+        foot_pattern = pf.select_contours(np_ir, contours)
+        if len(foot_pattern) == 2:
+            self.foot.draw_and_obtain_element(np_ir, foot_pattern)
+            self.foot.assign_data_to_draw()
+        # if len(foot_pattern) == 2:
+        #     # print("have foot_pattern")
+        #     left_rect = 0.0
+        #     left_line = 0.0
+        #     right_rect = 0.0
+        #     right_line = 0.0
+        #     for item in foot_pattern:
+        #         rect = pf.draw_min_rectangle(np_ir, item)
+        #         """
+        #             rect = cv.minAreaRect()
+        #             最小外接矩形，返回值为一个数组
+        #             rect[ 0 ] : 中心点 x,y
+        #             rect[ 1 ] : size width and height
+        #             rect[ 2 ] : angle
+        #                     定义域是[-90, 0)
+        #                     以矩形最底端画平行线，右侧水平夹角的角度负值
+        #
+        #         """
+        #
+        #         line_angle = pf.draw_min_line(np_ir, item)
+        #
+        #         x, y, w, h = pf.draw_normal_rectangle(np_ir, item)
+        #
+        #         if x < (32 * self.scope) / 2:
+        #             left_rect = (90 + rect[2])
+        #             left_line = (90 + line_angle)
+        #             print("left: ", left_rect, left_line)
+        #             cv.putText(np_ir, str(int(90 + rect[2])), (100, 100), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 255),
+        #                        2,
+        #                        cv.LINE_AA)
+        #         else:
+        #             right_rect = -rect[2]
+        #             right_line = (90 - line_angle)
+        #             print("right: ", right_rect, right_line)
+        #             cv.putText(np_ir, str(int(- rect[2])), (32 * self.scope - 500, 100), cv.FONT_HERSHEY_SIMPLEX, 2,
+        #                        (255, 255, 255), 1,
+        #                        cv.LINE_AA)
+        #     print("line:", left_line - right_line,"rect: ", left_rect - right_rect)
+        #
+        #     return item
+        # else:
+        #     return
 
     def find_foot(self, np_ir, contours):
         big_pattern = []
@@ -282,8 +289,10 @@ class DemonProcess(object):
         cv.namedWindow("The IR data", 0)
         cv.resizeWindow("The IR data", 32 * 30, 24 * 30)
         cv.imshow("The IR data", np_ir)
+
         self.out.write(np_ir)
         if cv.waitKey(1) == ord('q'):
+            # self.foot.draw_pic()
             self.out.release()
             cv.destroyAllWindows()
             self.serial.close()
@@ -294,9 +303,7 @@ class DemonProcess(object):
             return 1
 
 
-pass
-
-if __name__ == '__main__':
+def start_Demon():
     dp = DemonProcess()
     head = []
     data = []
@@ -320,11 +327,11 @@ if __name__ == '__main__':
             if len(data) == rest_num:
                 temp, ir_np, foot = dp.demonstrate_data(data[rest_num - 1], filter_data,
                                                         filter_num=2)  # ,zoom_filter=Image.HAMMING
-                # pf.show_temperature(temp)
                 # ir_np = pf.draw_hist(ir_np)
                 if foot:
-                    ir_np = pf.image_processing_mean_filter(ir_np,kernel_num=5)
-                    # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.7)
+                    ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=16)
+                    # pf.show_temperature(temp)
+                    # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.6, -0.8)
                     ir_np, contours = dp.binary_image(np.array(ir_np))
                     dp.find_foot_ankle(ir_np, contours)
                     if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
@@ -335,3 +342,7 @@ if __name__ == '__main__':
                 # if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                 #     break
                 data.pop(rest_num - 1)
+
+
+if __name__ == '__main__':
+    start_Demon()
