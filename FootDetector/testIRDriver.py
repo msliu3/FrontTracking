@@ -17,7 +17,7 @@ None
 import threading
 import numpy as np
 
-from DemonstrationProcess import DemonProcess
+from FootDetector.DemonstrationProcess import DemonProcess
 from DigitalDriver.ControlDriver import ControlDriver
 dp = DemonProcess()
 cd = ControlDriver()

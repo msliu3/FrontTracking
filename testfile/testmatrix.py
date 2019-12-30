@@ -14,7 +14,7 @@ None
 """
 
 import numpy as np
-import ProcessFunc as pf
+from FootDetector import ProcessFunc as pf
 
 a = np.array([[1, 2], [3, 4], [5, 6]])
 b = np.array([[1, 2], [3, 4], [5, 6]])

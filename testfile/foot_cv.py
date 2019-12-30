@@ -15,7 +15,7 @@
 
 import numpy as np
 import cv2 as cv
-import ProcessFunc as pf
+from FootDetector import ProcessFunc as pf
 
 img = cv.imread('../resource/enlarge-original.jpg', 0)
 img2 = cv.imread('../resource/segment.jpg', 1)

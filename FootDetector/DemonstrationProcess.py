@@ -13,10 +13,9 @@ import serial
 import numpy as np
 from PIL import Image
 import cv2 as cv
-import ProcessFunc as pf
-import FootInformation as foot
+from FootDetector import ProcessFunc as pf, FootInformation as foot
 
-from IRCamera import IRCamera
+from FootDetector.IRCamera import IRCamera
 
 
 class DemonProcess(object):

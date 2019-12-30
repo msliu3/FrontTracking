@@ -7,10 +7,10 @@ Created on Mon Aug  5 20:39:40 2019
 """
 import serial
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image
 import cv2 as cv
 
-from IRCamera import IRCamera
+from FootDetector.IRCamera import IRCamera
 
 headSize = 4
 scope = 20

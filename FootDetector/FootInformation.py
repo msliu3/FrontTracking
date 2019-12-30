@@ -14,13 +14,10 @@ None
 """
 import threading
 
-import numpy as np
-import ProcessFunc as pf
+from FootDetector import ProcessFunc as pf, DemonstrationProcess
 import cv2 as cv
 from matplotlib import pyplot as plt
-import math
 
-import DemonstrationProcess
 from threading import Thread
 
 

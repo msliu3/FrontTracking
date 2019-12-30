@@ -13,10 +13,9 @@
 None
 """
 
-import numpy as np
 import cv2 as cv
 
-import ProcessFunc as pf
+from FootDetector import ProcessFunc as pf
 
 image, contours = pf.get_contours('../resource/enlarge-original.jpg', 97)
 cv.drawContours(image, contours, -1, (255, 0, 0), 3)
