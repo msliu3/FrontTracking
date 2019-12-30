@@ -16,9 +16,19 @@
     3.旋转半径
 控制输出结果：
     以机器人为原点[0, 0, 0] -> 期望位置[x, y, theta]
+    12-30:因为我们的机器人不能平移，所以不设y值
     其中该坐标系遵循右手系：
 
     theta往左为正，往右为负
+
+    -------------------------------------------------
+    12-30：
+    分别设置几个情况，进行匹配
+    1.原地旋转
+    2.前进转弯（小角度和大角度）
+    3.直线前进
+    4.后退
+
 """
 import math
 import time
@@ -47,8 +57,18 @@ class PositionControl(object):
         self.radius = 0
         pass
 
-    def design_path(self):
+    def design_path_rotate(self):
+        if self.expect_theta > 0:
+            self.omega = 0.3
+        else:
+            self.omega = -0.3
+        rad = math.radians(self.expect_theta)
+        self.running_time = abs(rad) / abs(self.omega)
+        pass
+
+    def design_path_forward_and_turning(self):
         """
+        直行和行走转弯都可以处理
         [0, 15]    (15, 30]    (30, 45]    (45, 90]
         -------------------------------------------
         正无穷      r ->2r        r           r/2
@@ -61,7 +81,9 @@ class PositionControl(object):
 
         abs_theta = abs(self.expect_theta)
         if abs_theta <= 15:
+            # 判定为直行
             self.omega = 0
+            self.forward_time()
         elif 15 < abs_theta <= 30:
             self.radius = self.robot_r * 2 - ((abs_theta - 15) / (30 - 15) * self.robot_r)
             print()
@@ -79,6 +101,13 @@ class PositionControl(object):
         sin = math.sin(self.expect_x / l)
         rad = math.asin(sin)
         return rad, math.degrees(rad)
+
+    def forward_and_back_time(self):
+        if self.expect_x < 0:
+            self.speed = -0.1
+        else:
+            self.speed = 0.1
+        self.running_time = abs(self.expect_x) / abs(self.speed)
 
     def set_expect(self, expect_x, expect_theta):
         self.expect_x = expect_x
