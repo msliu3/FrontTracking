@@ -14,7 +14,7 @@ None
 """
 import threading
 
-from FootDetector import ProcessFunc as pf, DemonstrationProcess
+from FootDetector import ProcessFunc as pf
 import cv2 as cv
 from matplotlib import pyplot as plt
 
@@ -49,6 +49,7 @@ class FootInformation(Thread):
         self.foot_size_left_w = 0
         self.foot_size_left_h = 0
 
+        # center position
         self.foot_position_right_x = 0
         self.foot_position_right_y = 0
         self.foot_size_right_w = 0
@@ -71,12 +72,12 @@ class FootInformation(Thread):
             rect_right = pf.draw_min_rectangle(self.image, item1)
             line_left = pf.draw_min_line(self.image, item0)
             line_right = pf.draw_min_line(self.image, item1)
-            self.foot_position_left_x = x0
-            self.foot_position_left_y = y0
+            self.foot_position_left_x = rect_left[0][0]
+            self.foot_position_left_y = rect_left[0][1]
             self.foot_size_left_w = w0
             self.foot_size_left_h = h0
-            self.foot_position_right_x = x1
-            self.foot_position_right_y = y1
+            self.foot_position_right_x = rect_right[0][0]
+            self.foot_position_right_y = rect_right[0][1]
             self.foot_size_right_w = w1
             self.foot_size_right_h = h1
         else:
@@ -132,13 +133,6 @@ class FootInformation(Thread):
         """
         pass
 
-    def Rotate_in_place(self, kp=1):
-        expect_angle = abs(self.left_line) - abs(self.right_line)
-        return (self.base_line - expect_angle) * kp
-
-    def loop(self):
-        while True:
-            self.Rotate_in_place()
 
 if __name__ == '__main__':
     thread1 = threading.Thread(target=DemonstrationProcess.start_Demon(), args=())

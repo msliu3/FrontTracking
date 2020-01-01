@@ -13,7 +13,6 @@ import os, sys
 import threading
 
 BASE_DIR = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/DigitalDriver"))
-# "/home/msliu/catkin_ws/src/neo_front_following/src/DigitalDriver"
 print(BASE_DIR+"/..")
 sys.path.append(BASE_DIR)
 from DigitalDriver import ControlDriver as CD
@@ -32,26 +31,7 @@ def loop(control):
     while True:
         control.speed = line.control_system(0.37)
         # print(cd.speed)
-    # while True:
-    #     time.sleep(5)
-    #     temp = str(input("type: a->speed b->omega c->r clear"))
-    #     if temp == "a":
-    #         speed = input("speed")
-    #         control.speed = float(speed)
-    #     elif temp == "b":
-    #         omega = input("omega")
-    #         control.omega = float(omega)
-    #     elif temp == "c":
-    #         r = input("radius")
-    #         control.radius = float(r)
-    #     elif temp == "clear":
-    #         control.omega = 0
-    #         control.speed = 0
-    #         control.radius = 0
-    #
-    #     if temp == -1:
-    #         control.flag_end = 1
-    #         break
+
     pass
 
 

@@ -8,7 +8,10 @@
 ------------      -------    --------    -----------
 2019/10/9 22:24   msliu      1.0         OOP for Demo and process, the output is theta and temperature
 """
+import os, sys
 
+BASE_DIR = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/FootDetector"))
+sys.path.append(BASE_DIR)
 import serial
 import numpy as np
 from PIL import Image
@@ -101,12 +104,11 @@ class DemonProcess(object):
         for i in range(len(temp_data)):
             # demo1 two methods to demonstrate IR data
             # if result[i] == flag:
-            #     temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 105) + 100
+            #     temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 155) + 100
             # else:
             #     temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 100)
 
             temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
-
 
         # list的顺序并不是图像顺序，需要reshape进行变形
         np_data = np.array(temp_data).reshape(24, 32)
@@ -118,7 +120,7 @@ class DemonProcess(object):
         rgb_data = rgb_data.T.reshape(24, 32, 3)
 
         # 分别是均值滤波器（当前使用）、中位数滤波器、高斯滤波器
-        rgb_data = pf.image_processing_mean_filter(rgb_data, kernel_num=2)
+        rgb_data = pf.image_processing_mean_filter(rgb_data, kernel_num=3)
         # rgb_data = cv.medianBlur(rgb_data,7)
         # rgb_data = cv.GaussianBlur(rgb_data, (3, 3), 0)
 
@@ -155,7 +157,7 @@ class DemonProcess(object):
         theta_left, theta_right = -1, -1
         return theta_left, theta_right
 
-    def binary_image(self, np_ir, threshold=127):
+    def binary_image(self, np_ir, threshold=137):
         """
 
         threshold = 106可调
@@ -329,11 +331,13 @@ def start_Demon():
                                                         filter_num=2)  # ,zoom_filter=Image.HAMMING
                 # ir_np = pf.draw_hist(ir_np)
                 if foot:
-                    ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=32)
+                    # filter is effective
+                    # ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=32)
+
                     # pf.show_temperature(temp)
-                    # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.6, -0.8)
+                    # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.8)
                     ir_np, contours = dp.binary_image(np.array(ir_np))
-                    dp.find_foot_ankle(ir_np, contours)
+                    # dp.find_foot_ankle(ir_np, contours)
                     if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                         break
 
@@ -342,6 +346,7 @@ def start_Demon():
                 # if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                 #     break
                 data.pop(rest_num - 1)
+                data.pop(0)
 
 
 if __name__ == '__main__':

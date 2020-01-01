@@ -24,14 +24,14 @@ import FootDetector.FootInformation as FootInformation
 import threading
 
 
-class MatchCase(object, FootInformation):
-    def __init__(self):
+class MatchCase(object):
+    def __init__(self, FootInformation):
         # 打开ros，开始读取leg information
         self.leg = LegLidar.LegInformation()
         thread_start = threading.Thread(target=self.leg.loop, args=())
         thread_start.start()
         # 因为footinformation不是已独立存在的类，所以这里选用传入的方式
-        self.foot = FootInformation.FootInformation()
+        self.foot = FootInformation
         """
         下面是我需要得到的东西，期望的x和theta
         """
@@ -74,12 +74,22 @@ class MatchCase(object, FootInformation):
                             起始点比较考前
         :return:
         """
+        self.distance_detect_front_foot()
+        self.img_detect_front_foot()
         pass
 
     def img_detect_front_foot(self):
+        """
+        2.从图像上讲，近大远小哪只脚的面积比较大
+                            起始点比较考前
+        :return:
+        """
         area_left = self.foot.foot_size_left_w * self.foot.foot_size_left_h
         area_right = self.foot.foot_size_right_w * self.foot.foot_size_right_h
-        result = area_left / area_right
+        if area_right != 0:
+            result = area_left / area_right
+        else:
+            result = 100
         if result > 1:
             #     左脚比右脚大
             temp_result_area = "left"
@@ -90,6 +100,7 @@ class MatchCase(object, FootInformation):
         else:
             self.img_size_same = False
 
+        # original position
         if self.foot.foot_position_left_y > self.foot.foot_position_right_y:
             temp_result_distance = "left"
         else:
@@ -101,15 +112,24 @@ class MatchCase(object, FootInformation):
         else:
             print("can not distinguish!")
             self.img_dis_same = True
+        print("img: ", temp_result_area, temp_result_distance, "is same ", self.img_size_same)
         return result
 
     def distance_detect_front_foot(self):
+        """
+        1.从距离上讲，那只脚的x比较大可以认为在前
+        :return:
+        """
         if self.leg.left_leg_x > self.leg.right_leg_x:
             self.distance_flag = "left"
         else:
             self.distance_flag = "right"
-        if abs(self.leg.left_leg_x - self.leg.right_leg_x) < 0.1:
+        if abs(self.leg.left_leg_x - self.leg.right_leg_x) < 0.05:
+
             self.distance_same = True
         else:
             self.distance_same = False
+
+        print("distance: the front foot is " + self.distance_flag, "is same: ", self.distance_same, " ",
+              abs(self.leg.left_leg_x - self.leg.right_leg_x))
         pass
