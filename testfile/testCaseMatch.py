@@ -21,55 +21,83 @@ BASE_DIR = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_
 sys.path.append(BASE_DIR)
 BASE_DIR1 = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/Control"))
 sys.path.append(BASE_DIR1)
+BASE_DIR2 = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/DigitalDriver"))
+sys.path.append(BASE_DIR1)
 
 import Control.MatchCase as MC
 import FootDetector.DemonstrationProcess as DP
 import FootDetector.ProcessFunc as pf
 import numpy as np
 
-dp = DP.DemonProcess()
-head = []
-data = []
-filter_data = []
-rest_num = 5
-matcher = MC.MatchCase(dp.foot)
-while True:
-    s = dp.serial.read(1).hex()
-    if s != "":
-        s = int(s, 16)
-    head.append(s)
+import threading
+import time
+import DigitalDriver.ControlDriver as CD
+import Control.PositionControl as PC
 
-    if len(head) == dp.head_size:
-        if dp.check_head_data(head):
-            temp = dp.serial.read(1540)
-            data.append(temp.hex())
-            head.clear()
-        else:
-            head.pop(0)
 
-        # 将读到的数据进行展示
-        if len(data) == rest_num:
-            temp, ir_np, foot = dp.demonstrate_data(data[rest_num - 1], filter_data,
-                                                    filter_num=2)  # ,zoom_filter=Image.HAMMING
-            # ir_np = pf.draw_hist(ir_np)
-            if foot:
-                ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=32)
-                # pf.show_temperature(temp)
-                # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.6, -0.8)
-                ir_np, contours = dp.binary_image(np.array(ir_np))
-                dp.find_foot_ankle(ir_np, contours)
+def loop(control, pc, e):
+    while True:
+        e.wait()
+        if pc.action_over:
+            print("action!!!!!!!!!!!!!")
+            pc.action(control)
 
-                matcher.detect_front_and_back_foot()
-                # matcher.img_detect_front_foot()
-                # matcher.distance_detect_front_foot()
 
-                if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
-                    break
+if __name__ == '__main__':
+    e = threading.Event()
+    pc = PC.PositionControl()
+    cd = CD.ControlDriver()
+    p1 = threading.Thread(target=loop, args=(cd, pc, e))
+    p2 = threading.Thread(target=cd.control_part, args=())
+    p2.start()
+    p1.start()
+    dp = DP.DemonProcess()
+    head = []
+    data = []
+    filter_data = []
+    rest_num = 5
+    matcher = MC.MatchCase(dp.foot)
+    while True:
+        s = dp.serial.read(1).hex()
+        if s != "":
+            s = int(s, 16)
+        head.append(s)
 
-            # ir_np, contours = dp.binary_image(np.array(ir_np))
-            # dp.find_foot_ankle(ir_np, contours)
-            # if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
-            #     break
-            data.pop(rest_num - 1)
-            data.pop(0)
-            # data.pop(0)
+        if len(head) == dp.head_size:
+            if dp.check_head_data(head):
+                temp = dp.serial.read(1540)
+                data.append(temp.hex())
+                head.clear()
+            else:
+                head.pop(0)
+            # 将读到的数据进行展示
+            if len(data) == rest_num:
+                temp, ir_np, foot = dp.demonstrate_data(data[rest_num - 1], filter_data,
+                                                        filter_num=2)  # ,zoom_filter=Image.HAMMING
+                # ir_np = pf.draw_hist(ir_np)
+                if foot:
+
+                    # ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=32)
+                    # pf.show_temperature(temp)
+                    # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.6, -0.8)
+                    ir_np, contours = dp.binary_image(np.array(ir_np))
+                    dp.find_foot_ankle(ir_np, contours)
+
+                    matcher.detect_front_and_back_foot()
+                    x, theta = matcher.detect_case()
+                    print(x, theta)
+                    pc.set_expect(x, theta)
+                    e.set()
+                    # matcher.img_detect_front_foot()
+                    # matcher.distance_detect_front_foot()
+
+                    if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
+                        break
+
+                # ir_np, contours = dp.binary_image(np.array(ir_np))
+                # dp.find_foot_ankle(ir_np, contours)
+                # if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
+                #     break
+                data.pop(rest_num - 1)
+                data.pop(0)
+                # data.pop(0)

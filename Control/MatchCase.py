@@ -46,8 +46,8 @@ class MatchCase(object):
 
         # 判断那只脚在前那只脚在后
         self.front = ""
-        self.back = ""
         self.not_distinguish = False
+        self.no_result = False
         self.step_distance = 0.0
         self.distance_flag = ""
         self.distance_same = False
@@ -57,7 +57,7 @@ class MatchCase(object):
         self.img_dis_same = False
         pass
 
-    def is_in_place(self):
+    def detect_case(self):
         """
         判断人是不是在原地
         以两个轮子连线的中点为基准线
@@ -66,7 +66,31 @@ class MatchCase(object):
         均认为是原地动作
         :return:
         """
-        pass
+        if self.not_distinguish:
+            dis = (self.leg.left_leg_x + self.leg.right_leg_x) / 2
+            print("dis", dis)
+            if -0.15 < dis < 0.05:
+                self.rotate = True
+                print("rotate")
+            else:
+                if dis < -0.15:
+                    self.back = True
+                    print("back")
+                    self.go_back(dis)
+                    if self.expect_x != 0:
+                        return self.expect_x, self.expect_theta
+                elif dis > 0.05:
+                    print("forward")
+                    self.forward = True
+        else:
+            if self.front != "":
+                print("turing and forward")
+                self.turning = True
+        return 0, 0
+
+    def go_back(self, dis):
+        self.expect_x = dis
+        self.expect_theta = 0
 
     def detect_front_and_back_foot(self):
         """
@@ -76,17 +100,25 @@ class MatchCase(object):
                             起始点比较考前
         :return:
         """
+        self.no_result = False
         dis = self.distance_detect_front_foot()
         self.img_detect_front_foot()
         if self.distance_same:
             self.not_distinguish = True
-            print("same ", dis)
+            self.front = ""
+            # print("same ", dis)
         else:
             if self.distance_flag == self.img_flag:
                 self.front = self.distance_flag
-                print("front is", self.front, dis)
+                self.not_distinguish = False
+                # print("front is", self.front, dis)
             else:
-                print("not combine")
+                self.clear()
+                self.no_result = True
+        if self.not_distinguish and dis == 0:
+            self.clear()
+            self.no_result = True
+        # print("front is ", self.front, "is same?", self.not_distinguish, "has result?", self.no_result, dis)
         pass
 
     def img_detect_front_foot(self):
@@ -146,3 +178,26 @@ class MatchCase(object):
         #       abs(self.leg.left_leg_x - self.leg.right_leg_x))
         self.step_distance = abs(self.leg.left_leg_x - self.leg.right_leg_x)
         return self.step_distance
+
+    def clear(self):
+        self.expect_x = 0.0
+        self.expect_theta = 0.0
+
+        # 这是四种case的情况
+        self.rotate = False
+        self.forward = False
+        self.turning = False
+        self.back = False
+
+        # 判断那只脚在前那只脚在后
+        self.front = ""
+        self.back = ""
+        self.not_distinguish = False
+        self.no_result = False
+        self.step_distance = 0.0
+        self.distance_flag = ""
+        self.distance_same = False
+
+        self.img_flag = ""
+        self.img_size_same = False
+        self.img_dis_same = False

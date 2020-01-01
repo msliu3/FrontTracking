@@ -24,7 +24,8 @@ from FootDetector.IRCamera import IRCamera
 class DemonProcess(object):
     head_size = 4
 
-    def __init__(self, scope=30, fps=5, output_path="../resource/output.avi"):
+    def __init__(self, scope=30, fps=5, output_path="/home/msliu/catkin_ws/src/neo_front_following/src/resource"
+                                                    "/output.avi"):
         self.env = -1
         self.scope = scope
         self.ir_array_data = np.array((32 * self.scope, 24 * self.scope))

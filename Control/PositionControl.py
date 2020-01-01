@@ -49,6 +49,8 @@ class PositionControl(object):
         self.omega = 0.0
         self.radius = 0.0
         self.running_time = 0.0
+
+        self.action_over = True
         pass
 
     def clear_driver(self):
@@ -115,17 +117,21 @@ class PositionControl(object):
         pass
 
     def set_driver(self, control_driver):
+        control_driver.speed = self.speed
         control_driver.radius = self.radius
         control_driver.omega = self.omega
         pass
 
     def action(self, control_driver):
-        self.design_path()
+        self.action_over = False
+        self.forward_and_back_time()
+        print("into speed!!!!!!!!!!!!!!!!!!!!!!!!!!", self.speed)
         self.set_driver(control_driver)
-        print("into", self.omega)
         time.sleep(self.running_time)
         self.clear_driver()
         self.set_driver(control_driver)
+        self.action_over = True
+
 
 
 if __name__ == '__main__':
