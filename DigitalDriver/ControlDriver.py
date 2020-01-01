@@ -17,9 +17,17 @@
 怎么隐隐约约觉得这好像是一个互斥问题啊
 
 """
+
+import os, sys
+import threading
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+print(BASE_DIR)
+sys.path.append(BASE_DIR)
+
 import time
 from threading import Thread
-import DigitalDriver.DigitalServoDriver as DsD
+import DigitalDriver.DigitalServoDriver_linux as DsD
 import serial
 import math
 
@@ -86,7 +94,7 @@ class ControlDriver(Thread):
                     2 (vr - vl)
         :return:
         """
-        if self.omega>0:
+        if self.omega > 0:
             vl = (self.radius + (56 / 2)) / 100 * self.omega
             vr = (self.radius - (56 / 2)) / 100 * self.omega
         else:

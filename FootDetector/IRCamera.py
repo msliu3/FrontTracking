@@ -18,7 +18,7 @@ class IRCamera(object):
 
     def __init__(self, baud_rate=460800):
         self.baud_rate = baud_rate
-        self.port_name, self.port_list = self.detect_serials("USB-SERIAL CH340")
+        self.port_name, self.port_list = self.detect_serials("USB2.0-Serial") #USB2.0-Serial USB-SERIAL CH340
         print(self.port_name, self.baud_rate)
         return
 

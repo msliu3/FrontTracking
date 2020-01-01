@@ -9,10 +9,15 @@
 2019/10/15 21:55   msliu      1.0         None
 """
 
+import os, sys
 import threading
-import DigitalDriver.ControlDriver as CD
+
+BASE_DIR = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/DigitalDriver"))
+# "/home/msliu/catkin_ws/src/neo_front_following/src/DigitalDriver"
+print(BASE_DIR+"/..")
+sys.path.append(BASE_DIR)
+from DigitalDriver import ControlDriver as CD
 import LegDetector.Line_control as Line_control
-import time
 
 
 # cd = CD.ControlDriver()

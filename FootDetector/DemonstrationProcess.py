@@ -21,7 +21,7 @@ from FootDetector.IRCamera import IRCamera
 class DemonProcess(object):
     head_size = 4
 
-    def __init__(self, scope=30, fps=5, output_path="./resource/output.avi"):
+    def __init__(self, scope=30, fps=5, output_path="../resource/output.avi"):
         self.env = -1
         self.scope = scope
         self.ir_array_data = np.array((32 * self.scope, 24 * self.scope))
@@ -99,12 +99,13 @@ class DemonProcess(object):
         # print("kmeans env:", kmeans_env)
         # print("foot is %d" % flag)
         for i in range(len(temp_data)):
-            if result[i] == flag:
-                temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 155) + 100
-            else:
-                temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 100)
+            # demo1 two methods to demonstrate IR data
+            # if result[i] == flag:
+            #     temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 105) + 100
+            # else:
+            #     temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 100)
 
-            # temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
+            temp_data[i] = int((temp_data[i] - min_temp) / (max_temp - min_temp) * 255)
 
 
         # list的顺序并不是图像顺序，需要reshape进行变形
@@ -328,7 +329,7 @@ def start_Demon():
                                                         filter_num=2)  # ,zoom_filter=Image.HAMMING
                 # ir_np = pf.draw_hist(ir_np)
                 if foot:
-                    ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=16)
+                    ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=32)
                     # pf.show_temperature(temp)
                     # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.6, -0.8)
                     ir_np, contours = dp.binary_image(np.array(ir_np))

@@ -19,7 +19,7 @@
 用过FootInformation 和 LegInformation
 
 """
-import LegDetector.LegLidar as LegLidar
+import LegDetector.LegInformation as LegLidar
 import FootDetector.FootInformation as FootInformation
 import threading
 
