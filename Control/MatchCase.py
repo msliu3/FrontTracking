@@ -47,6 +47,8 @@ class MatchCase(object):
         # 判断那只脚在前那只脚在后
         self.front = ""
         self.back = ""
+        self.not_distinguish = False
+        self.step_distance = 0.0
         self.distance_flag = ""
         self.distance_same = False
 
@@ -74,8 +76,17 @@ class MatchCase(object):
                             起始点比较考前
         :return:
         """
-        self.distance_detect_front_foot()
+        dis = self.distance_detect_front_foot()
         self.img_detect_front_foot()
+        if self.distance_same:
+            self.not_distinguish = True
+            print("same ", dis)
+        else:
+            if self.distance_flag == self.img_flag:
+                self.front = self.distance_flag
+                print("front is", self.front, dis)
+            else:
+                print("not combine")
         pass
 
     def img_detect_front_foot(self):
@@ -109,10 +120,11 @@ class MatchCase(object):
         # 这里面没有判断位置近似的情况
         if temp_result_distance == temp_result_area:
             self.img_flag = temp_result_area
+            self.img_dis_same = False
         else:
-            print("can not distinguish!")
+            # print("can not distinguish!")
             self.img_dis_same = True
-        print("img: ", temp_result_area, temp_result_distance, "is same ", self.img_size_same)
+        # print("img: ", temp_result_area, temp_result_distance, "is same ", self.img_size_same,self.img_dis_same)
         return result
 
     def distance_detect_front_foot(self):
@@ -130,6 +142,7 @@ class MatchCase(object):
         else:
             self.distance_same = False
 
-        print("distance: the front foot is " + self.distance_flag, "is same: ", self.distance_same, " ",
-              abs(self.leg.left_leg_x - self.leg.right_leg_x))
-        pass
+        # print("distance: the front foot is " + self.distance_flag, "is same: ", self.distance_same, " ",
+        #       abs(self.leg.left_leg_x - self.leg.right_leg_x))
+        self.step_distance = abs(self.leg.left_leg_x - self.leg.right_leg_x)
+        return self.step_distance

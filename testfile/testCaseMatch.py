@@ -58,8 +58,11 @@ while True:
                 # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.6, -0.8)
                 ir_np, contours = dp.binary_image(np.array(ir_np))
                 dp.find_foot_ankle(ir_np, contours)
+
+                matcher.detect_front_and_back_foot()
+                # matcher.img_detect_front_foot()
                 # matcher.distance_detect_front_foot()
-                matcher.img_detect_front_foot()
+
                 if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                     break
 
