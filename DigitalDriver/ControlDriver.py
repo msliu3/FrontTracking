@@ -83,7 +83,9 @@ class ControlDriver(Thread):
         return rpm_byte
 
     def get_speed_rpm(self, w):
-        rpm = (self.speed + w) / (2 * math.pi * self.radius_wheel / 1000) * 60
+        # ?first version
+        # rpm = (self.speed + w) / (2 * math.pi * self.radius_wheel / 1000) * 60
+        rpm = w / (2 * math.pi * self.radius_wheel / 1000) * 60
         # print(int(rpm))
         return int(rpm)
 

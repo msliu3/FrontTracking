@@ -22,7 +22,7 @@ from threading import Thread
 
 
 class FootInformation(Thread):
-    def __init__(self):
+    def __init__(self,length =100):
         """
 
         :param np_ir:  source image
@@ -39,9 +39,11 @@ class FootInformation(Thread):
         self.left_line = 0.0
         self.right_line = 0.0
 
-        self.list_left = []
-        self.list_right = []
-        self.human = []
+        self.list_left_line = []
+        self.list_right_line = []
+        self.list_left_rect = []
+        self.list_right_rect = []
+        self.list_length = length
 
         # 记录两只脚的大小和位置
         self.foot_position_left_x = 0
@@ -95,12 +97,25 @@ class FootInformation(Thread):
             self.foot_size_right_w = w0
             self.foot_size_right_h = h0
 
-        self.left_rect = -rect_left[2]
-        self.right_rect = 90 + rect_right[2]
+        if abs(rect_left[2]) == 90:
+            if self.foot_size_left_w > self.foot_size_left_h:
+                self.left_rect = 0.0
+            else:
+                self.left_rect = 90.0
+        else:
+            self.left_rect = -rect_left[2]
+
+        if abs(rect_right[2]) == 90:
+            if self.foot_size_right_w > self.foot_size_right_h:
+                self.right_rect = 0.0
+            else:
+                self.right_rect = 90.0
+        else:
+            self.right_rect = 90 + rect_right[2]
         self.left_line = -line_left
         self.right_line = line_right
 
-        text = "left: " + str(round(self.left_rect, 2)) + " right: " + str(round(self.right_rect, 2))
+        text = "left: " + str(round(self.left_line, 2)) + " right: " + str(round(self.right_line, 2))
         cv.putText(self.image, text, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv.LINE_AA)
         # print(self.left_line, self.right_line)
 
@@ -110,33 +125,55 @@ class FootInformation(Thread):
         pass
 
     def assign_data_to_draw(self):
-        self.list_left.append(abs(self.left_line))
-        self.list_right.append(abs(self.right_line))
-        self.human.append(abs(self.left_line) - abs(self.right_line))
+        self.list_left_line.append(self.left_line)
+        self.list_right_line.append(self.right_line)
+        self.list_left_rect.append(self.left_rect)
+        self.list_right_rect.append(self.right_rect)
         pass
 
     def draw_pic(self):
         plt.figure(1)
-        plt.subplot(311)
-        plt.plot(self.list_left)
-        plt.subplot(312)
-        plt.plot(self.list_right)
-        plt.subplot(313)
-        plt.plot(self.human)
+        plt.subplot(511)
+        plt.plot(self.mean_filter(self.list_left_line))
+        plt.subplot(512)
+        plt.plot(self.mean_filter(self.list_right_line))
+        plt.subplot(513)
+        plt.plot(self.mean_filter(self.list_left_rect))
+        plt.subplot(514)
+        plt.plot(self.mean_filter(self.list_right_rect))
+        plt.subplot(515)
+        plt.plot(self.gradient(self.mean_filter(self.list_left_line)))
         plt.show()
         pass
 
-    def is_moving(self):
+    def mean_filter(self, list, num=3):
         """
         这个函数用于判断，这个人是处于，运动的状态 还是 原地旋转
         :return:
         """
+        list.insert(0, list[0])
+        for i in range(1, len(list) - num + 1):
+            sum = 0
+            for j in range(num):
+                sum += list[i + j]
+            list[i] = sum / num
+        return list[1:]
         pass
+
+    def gradient(self, list):
+        new_list = []
+        for i in range(len(list) - 1):
+            new_list.append(list[i + 1] - list[i])
+        return new_list
 
 
 if __name__ == '__main__':
-    thread1 = threading.Thread(target=DemonstrationProcess.start_Demon(), args=())
-    thread1.start()
-
-
-
+    list1 = [4, 4, 4, 1, 4, 4, 4, 5,5]
+    print(max(list1))
+    list1.remove(5)
+    print(list1)
+    foot = FootInformation()
+    list1 = foot.mean_filter(list1, 3)
+    print(list1)
+    list2 = foot.gradient(list1)
+    print(list2)

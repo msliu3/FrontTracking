@@ -35,28 +35,30 @@ import DigitalDriver.ControlDriver as CD
 import Control.PositionControl as PC
 
 
-def loop(control, pc, e):
+def loop(control, pc, e, matcher):
     while True:
         e.wait()
         if pc.action_over:
-            print("action!!!!!!!!!!!!!")
-            pc.action(control)
+            if matcher.back or matcher.forward:
+                pc.action_forward_back(control)
+            elif matcher.turning:
+                pc.action_forward_and_turning(control)
 
 
 if __name__ == '__main__':
-    e = threading.Event()
+    event = threading.Event()
     pc = PC.PositionControl()
     cd = CD.ControlDriver()
-    p1 = threading.Thread(target=loop, args=(cd, pc, e))
+    dp = DP.DemonProcess()
+    matcher = MC.MatchCase(dp.foot)
+    p1 = threading.Thread(target=loop, args=(cd, pc, event, matcher))
+    p1.start()
     p2 = threading.Thread(target=cd.control_part, args=())
     p2.start()
-    p1.start()
-    dp = DP.DemonProcess()
     head = []
     data = []
     filter_data = []
     rest_num = 5
-    matcher = MC.MatchCase(dp.foot)
     while True:
         s = dp.serial.read(1).hex()
         if s != "":
@@ -85,9 +87,9 @@ if __name__ == '__main__':
 
                     matcher.detect_front_and_back_foot()
                     x, theta = matcher.detect_case()
-                    print(x, theta)
+                    # print("x and theta", x, theta)
                     pc.set_expect(x, theta)
-                    e.set()
+                    event.set()
                     # matcher.img_detect_front_foot()
                     # matcher.distance_detect_front_foot()
 

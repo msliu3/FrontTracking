@@ -60,12 +60,15 @@ class PositionControl(object):
         pass
 
     def design_path_rotate(self):
-        if self.expect_theta > 0:
-            self.omega = 0.3
+        if self.expect_theta == 0:
+            pass
         else:
-            self.omega = -0.3
-        rad = math.radians(self.expect_theta)
-        self.running_time = abs(rad) / abs(self.omega)
+            if self.expect_theta > 0:
+                self.omega = 0.3
+            else:
+                self.omega = -0.3
+            rad = math.radians(self.expect_theta)
+            self.running_time = abs(rad) / abs(self.omega)
         pass
 
     def design_path_forward_and_turning(self):
@@ -77,15 +80,16 @@ class PositionControl(object):
         :return:
         """
         if self.expect_theta > 0:
-            self.omega = 0.3
+            self.omega = 0.2
         else:
-            self.omega = -0.3
+            self.omega = -0.2
 
         abs_theta = abs(self.expect_theta)
         if abs_theta <= 15:
             # 判定为直行
             self.omega = 0
-            self.forward_time()
+            self.design_path_forward_and_back()
+            return
         elif 15 < abs_theta <= 30:
             self.radius = self.robot_r * 2 - ((abs_theta - 15) / (30 - 15) * self.robot_r)
             print()
@@ -93,22 +97,27 @@ class PositionControl(object):
             self.radius = self.robot_r
         elif 45 < abs_theta <= 90:
             self.radius = self.robot_r / 2
+        print(self.expect_x,self.expect_theta)
         rad, degree = self.calculate_degree(self.radius)
-        print("rad: ", rad, "degree: ", degree)
+        # print("rad: ", rad, "degree: ", degree)
         self.running_time = abs(rad / self.omega)
-        print(self.running_time)
+
+        # print(self.running_time)
         pass
 
     def calculate_degree(self, l):
-        sin = math.sin(self.expect_x / l)
+        sin = math.sin(self.expect_x / l * 100)
         rad = math.asin(sin)
         return rad, math.degrees(rad)
 
-    def forward_and_back_time(self):
+    def design_path_forward_and_back(self):
         if self.expect_x < 0:
             self.speed = -0.1
-        else:
+        elif self.expect_x > 0:
             self.speed = 0.1
+        else:
+            self.clear_driver()
+            return
         self.running_time = abs(self.expect_x) / abs(self.speed)
 
     def set_expect(self, expect_x, expect_theta):
@@ -122,20 +131,42 @@ class PositionControl(object):
         control_driver.omega = self.omega
         pass
 
-    def action(self, control_driver):
+    def action_forward_back(self, control_driver):
         self.action_over = False
-        self.forward_and_back_time()
-        print("into speed!!!!!!!!!!!!!!!!!!!!!!!!!!", self.speed)
-        self.set_driver(control_driver)
-        time.sleep(self.running_time)
+        self.design_path_forward_and_back()
+        print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
+        if self.speed != 0 or self.omega != 0:
+            self.set_driver(control_driver)
+            time.sleep(self.running_time)
         self.clear_driver()
         self.set_driver(control_driver)
         self.action_over = True
 
+    def action_rotation(self, control_driver):
+        self.action_over = False
+        self.design_path_rotate()
+        print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
+        if self.speed != 0 or self.omega != 0:
+            self.set_driver(control_driver)
+            time.sleep(self.running_time)
+        self.clear_driver()
+        self.set_driver(control_driver)
+        self.action_over = True
+
+    def action_forward_and_turning(self, control_driver):
+        self.action_over = False
+        self.design_path_forward_and_turning()
+        print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
+        if self.speed != 0 or self.omega != 0:
+            self.set_driver(control_driver)
+            time.sleep(self.running_time)
+        self.clear_driver()
+        self.set_driver(control_driver)
+        self.action_over = True
 
 
 if __name__ == '__main__':
     pc = PositionControl()
     pc.expect_x = 30
     pc.expect_theta = 60
-    pc.design_path()
+    pc.design_path_forward_and_back()

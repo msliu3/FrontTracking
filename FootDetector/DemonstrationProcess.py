@@ -158,7 +158,7 @@ class DemonProcess(object):
         theta_left, theta_right = -1, -1
         return theta_left, theta_right
 
-    def binary_image(self, np_ir, threshold=137):
+    def binary_image(self, np_ir, threshold=147):
         """
 
         threshold = 106可调
@@ -180,7 +180,7 @@ class DemonProcess(object):
         foot_pattern = pf.select_contours(np_ir, contours)
         if len(foot_pattern) == 2:
             self.foot.draw_and_obtain_element(np_ir, foot_pattern)
-            self.foot.assign_data_to_draw()
+            # self.foot.assign_data_to_draw()
         # if len(foot_pattern) == 2:
         #     # print("have foot_pattern")
         #     left_rect = 0.0
@@ -295,7 +295,7 @@ class DemonProcess(object):
 
         self.out.write(np_ir)
         if cv.waitKey(1) == ord('q'):
-            # self.foot.draw_pic()
+            self.foot.draw_pic()
             self.out.release()
             cv.destroyAllWindows()
             self.serial.close()
@@ -305,50 +305,49 @@ class DemonProcess(object):
                 cv.waitKey(-1)
             return 1
 
+    def start_Demon(self):
+        head = []
+        data = []
+        filter_data = []
+        rest_num = 5
+        while True:
+            s = self.serial.read(1).hex()
+            if s != "":
+                s = int(s, 16)
+            head.append(s)
 
-def start_Demon():
-    dp = DemonProcess()
-    head = []
-    data = []
-    filter_data = []
-    rest_num = 5
-    while True:
-        s = dp.serial.read(1).hex()
-        if s != "":
-            s = int(s, 16)
-        head.append(s)
+            if len(head) == self.head_size:
+                if self.check_head_data(head):
+                    temp = self.serial.read(1540)
+                    data.append(temp.hex())
+                    head.clear()
+                else:
+                    head.pop(0)
 
-        if len(head) == dp.head_size:
-            if dp.check_head_data(head):
-                temp = dp.serial.read(1540)
-                data.append(temp.hex())
-                head.clear()
-            else:
-                head.pop(0)
+                # 将读到的数据进行展示
+                if len(data) == rest_num:
+                    temp, ir_np, foot_flag = self.demonstrate_data(data[rest_num - 1], filter_data,
+                                                              filter_num=2)  # ,zoom_filter=Image.HAMMING
+                    # ir_np = pf.draw_hist(ir_np)
+                    if foot_flag:
+                        # filter is effective
+                        ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=16)
 
-            # 将读到的数据进行展示
-            if len(data) == rest_num:
-                temp, ir_np, foot = dp.demonstrate_data(data[rest_num - 1], filter_data,
-                                                        filter_num=2)  # ,zoom_filter=Image.HAMMING
-                # ir_np = pf.draw_hist(ir_np)
-                if foot:
-                    # filter is effective
-                    # ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=32)
+                        # pf.show_temperature(temp)
+                        # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.8)
+                        ir_np, contours = self.binary_image(np.array(ir_np))
+                        self.find_foot_ankle(ir_np, contours)
+                        if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
+                            break
 
-                    # pf.show_temperature(temp)
-                    # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.8)
-                    ir_np, contours = dp.binary_image(np.array(ir_np))
+                    # ir_np, contours = dp.binary_image(np.array(ir_np))
                     # dp.find_foot_ankle(ir_np, contours)
-                    if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
-                        break
-
-                # ir_np, contours = dp.binary_image(np.array(ir_np))
-                # dp.find_foot_ankle(ir_np, contours)
-                # if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
-                #     break
-                data.pop(rest_num - 1)
-                data.pop(0)
+                    # if dp.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
+                    #     break
+                    data.pop(rest_num - 1)
+                    data.pop(0)
 
 
 if __name__ == '__main__':
-    start_Demon()
+    pd = DemonProcess()
+    pd.start_Demon()
