@@ -21,11 +21,25 @@ from FootDetector import ProcessFunc as pf, FootInformation as foot
 from FootDetector.IRCamera import IRCamera
 
 
+def singleton(cls, *args, **kw):
+    instances = {}
+
+    def _singleton():
+        if cls not in instances:
+            instances[cls] = cls(*args, **kw)
+        return instances[cls]
+
+    return _singleton
+
+
+@singleton
 class DemonProcess(object):
     head_size = 4
+    resource = os.path.abspath(
+        os.path.dirname(os.path.abspath(__file__)) + os.path.sep + ".." + os.path.sep + "resource") + "/output.avi"
+    print(resource)
 
-    def __init__(self, scope=30, fps=5, output_path="/home/msliu/catkin_ws/src/neo_front_following/src/resource"
-                                                    "/output.avi"):
+    def __init__(self, scope=30, fps=5, output_path=resource):
         self.env = -1
         self.scope = scope
         self.ir_array_data = np.array((32 * self.scope, 24 * self.scope))
@@ -158,7 +172,7 @@ class DemonProcess(object):
         theta_left, theta_right = -1, -1
         return theta_left, theta_right
 
-    def binary_image(self, np_ir, threshold=147):
+    def binary_image(self, np_ir, threshold=127):
         """
 
         threshold = 106可调
@@ -180,7 +194,7 @@ class DemonProcess(object):
         foot_pattern = pf.select_contours(np_ir, contours)
         if len(foot_pattern) == 2:
             self.foot.draw_and_obtain_element(np_ir, foot_pattern)
-            # self.foot.assign_data_to_draw()
+            self.foot.assign_data_to_draw()
         # if len(foot_pattern) == 2:
         #     # print("have foot_pattern")
         #     left_rect = 0.0
@@ -305,7 +319,7 @@ class DemonProcess(object):
                 cv.waitKey(-1)
             return 1
 
-    def start_Demon(self):
+    def start_Demon(self, queue=None):
         head = []
         data = []
         filter_data = []
@@ -327,7 +341,7 @@ class DemonProcess(object):
                 # 将读到的数据进行展示
                 if len(data) == rest_num:
                     temp, ir_np, foot_flag = self.demonstrate_data(data[rest_num - 1], filter_data,
-                                                              filter_num=2)  # ,zoom_filter=Image.HAMMING
+                                                                   filter_num=2)  # ,zoom_filter=Image.HAMMING
                     # ir_np = pf.draw_hist(ir_np)
                     if foot_flag:
                         # filter is effective
@@ -336,6 +350,8 @@ class DemonProcess(object):
                         # pf.show_temperature(temp)
                         # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.8)
                         ir_np, contours = self.binary_image(np.array(ir_np))
+                        if queue is not None:
+                            queue.put(self.foot, block=False)
                         self.find_foot_ankle(ir_np, contours)
                         if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                             break

@@ -15,22 +15,18 @@
 
 """
 
-import os, sys
+import os
+import sys
 
-BASE_DIR = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/FootDetector"))
-sys.path.append(BASE_DIR)
-BASE_DIR1 = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/Control"))
-sys.path.append(BASE_DIR1)
-BASE_DIR2 = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/DigitalDriver"))
-sys.path.append(BASE_DIR1)
+pwd = os.path.abspath(os.path.abspath(__file__))
+father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
+sys.path.append(father_path)
 
 import Control.MatchCase as MC
 import FootDetector.DemonstrationProcess as DP
-import FootDetector.ProcessFunc as pf
 import numpy as np
 
 import threading
-import time
 import DigitalDriver.ControlDriver as CD
 import Control.PositionControl as PC
 

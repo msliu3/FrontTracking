@@ -24,6 +24,7 @@ import math
 import LegDetector.LegInformation as LegLidar
 import FootDetector.FootInformation as FootInformation
 import threading
+from matplotlib import pyplot as plt
 
 
 class MatchCase(object):
@@ -54,6 +55,7 @@ class MatchCase(object):
         self.step_distance = 0.0
         self.distance_flag = ""
         self.distance_same = False
+        self.dis_in_place = False
 
         self.img_flag = ""
         self.img_size_same = False
@@ -109,6 +111,8 @@ class MatchCase(object):
                 print("turing and forward")
                 self.turning = True
                 self.go_turning_and_forward()
+                # print(self.average_l, self.average_r)
+                # self.draw_pic()
                 # print(self.leg.left_leg_x, self.leg.right_leg_x)
                 return self.expect_x, self.expect_theta
         return 0, 0
@@ -127,6 +131,7 @@ class MatchCase(object):
         pass
 
     def go_turning_and_forward(self):
+        # print(self.a_l, self.a_r)
         if self.front == "left":
             self.expect_theta = 90 - self.a_l
             self.expect_x = self.leg.left_leg_x
@@ -219,6 +224,8 @@ class MatchCase(object):
         else:
             self.distance_same = False
 
+
+
         # print("distance: the front foot is " + self.distance_flag, "is same: ", self.distance_same, " ",
         #       abs(self.leg.left_leg_x - self.leg.right_leg_x))
         self.step_distance = abs(self.leg.left_leg_x - self.leg.right_leg_x)
@@ -296,3 +303,22 @@ class MatchCase(object):
         self.forward = False
         self.turning = False
         self.back = False
+
+    def draw_pic(self):
+        plt.figure(1)
+        plt.subplot(411)
+        plt.plot(self.average_l)
+        plt.subplot(412)
+        plt.plot(self.average_r)
+        plt.subplot(413)
+        plt.plot(self.gradient(self.gradient(self.average_l)))
+        plt.subplot(414)
+        plt.plot(self.gradient(self.gradient(self.average_r)))
+        plt.show()
+        pass
+
+    def gradient(self, list):
+        new_list = []
+        for i in range(len(list) - 1):
+            new_list.append(list[i + 1] - list[i])
+        return new_list

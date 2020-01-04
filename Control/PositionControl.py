@@ -93,11 +93,15 @@ class PositionControl(object):
         elif 15 < abs_theta <= 30:
             self.radius = self.robot_r * 2 - ((abs_theta - 15) / (30 - 15) * self.robot_r)
             print()
-        elif 30 < abs_theta <= 45:
+        elif 30 < abs_theta <= 65:
             self.radius = self.robot_r
-        elif 45 < abs_theta <= 90:
+        elif 65 < abs_theta < 90:
             self.radius = self.robot_r / 2
-        print(self.expect_x,self.expect_theta)
+        elif abs_theta >= 90:
+            self.omega = 0
+            self.design_path_forward_and_back()
+            return
+        print(self.expect_x, self.expect_theta)
         rad, degree = self.calculate_degree(self.radius)
         # print("rad: ", rad, "degree: ", degree)
         self.running_time = abs(rad / self.omega)
@@ -134,7 +138,7 @@ class PositionControl(object):
     def action_forward_back(self, control_driver):
         self.action_over = False
         self.design_path_forward_and_back()
-        print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
+        print("action_forward_back: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
         if self.speed != 0 or self.omega != 0:
             self.set_driver(control_driver)
             time.sleep(self.running_time)
@@ -156,7 +160,7 @@ class PositionControl(object):
     def action_forward_and_turning(self, control_driver):
         self.action_over = False
         self.design_path_forward_and_turning()
-        print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
+        print("action_turning: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
         if self.speed != 0 or self.omega != 0:
             self.set_driver(control_driver)
             time.sleep(self.running_time)
@@ -167,6 +171,6 @@ class PositionControl(object):
 
 if __name__ == '__main__':
     pc = PositionControl()
-    pc.expect_x = 30
-    pc.expect_theta = 60
-    pc.design_path_forward_and_back()
+    pc.expect_x = 0.08
+    pc.expect_theta = -37
+    pc.design_path_forward_and_turning()

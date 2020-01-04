@@ -14,13 +14,12 @@ None
 """
 import os
 import sys
+import time
 
-BASE_DIR = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/FootDetector"))
-sys.path.append(BASE_DIR)
-BASE_DIR1 = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/Control"))
-sys.path.append(BASE_DIR1)
-BASE_DIR2 = os.path.dirname(os.path.abspath("/home/msliu/catkin_ws/src/neo_front_following/src/DigitalDriver"))
-sys.path.append(BASE_DIR1)
+pwd = os.path.abspath(os.path.abspath(__file__))
+father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
+sys.path.append(father_path)
+import threading
 
 import Control.MatchCase as MC
 import FootDetector.DemonstrationProcess as DP
@@ -29,17 +28,37 @@ import FootDetector.DemonstrationProcess as DP
 import threading
 import DigitalDriver.ControlDriver as CD
 import Control.PositionControl as PC
+import multiprocessing
 
 
 def loop(control, matcher, pc, e):
     while True:
+        print("before wait")
         e.wait()
+        print("after wait start clear")
+        e.clear()
+        print("after wairt")
         if pc.action_over:
+            print("why not im")
             if matcher.back or matcher.forward:
                 pc.action_forward_back(control)
+                matcher.clear_case()
             elif matcher.turning:
                 pc.action_forward_and_turning(control)
+                matcher.clear_case()
 
+
+def loop2(matcher, queue, event):
+    while True:
+        time.sleep(0.05)
+        if not queue.empty():
+            matcher.foot = queue.get(block=False)
+            matcher.detect_front_and_back_foot()
+            x, theta = matcher.detect_case()
+            print("x and theta matcher", x, theta)
+            pc.set_expect(x, theta)
+            event.set()
+            matcher.clear_expect()
 def loop2(matcher):
     while True:
         matcher.detect_front_and_back_foot()
@@ -55,11 +74,12 @@ if __name__ == '__main__':
     mc = MC.MatchCase(foot=pd.foot)
     pc = PC.PositionControl()
     event = threading.Event()
-    thread_ir = threading.Thread(target=pd.start_Demon, args=())
-    thread_control_driver = threading.Thread(target=cd.control_part, args=())
+    queue = multiprocessing.Queue()
+    thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(queue,))
     thread_ir.start()
+    thread_control_driver = threading.Thread(target=cd.control_part, args=())
     thread_control_driver.start()
     p1 = threading.Thread(target=loop, args=(cd, mc, pc, event))
     p1.start()
-    p2 = threading.Thread(target=loop2, args=(mc,))
+    p2 = threading.Thread(target=loop2, args=(mc, queue, event))
     p2.start()

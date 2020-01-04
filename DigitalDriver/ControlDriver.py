@@ -18,13 +18,6 @@
 
 """
 
-import os, sys
-import threading
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-print(BASE_DIR)
-sys.path.append(BASE_DIR)
-
 import time
 from threading import Thread
 import DigitalDriver.DigitalServoDriver_linux as DsD
