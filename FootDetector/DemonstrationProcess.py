@@ -185,7 +185,10 @@ class DemonProcess(object):
         :return:
         """
         gary = cv.cvtColor(np_ir, cv.COLOR_BGR2GRAY)
-        ret, thresh = cv.threshold(gary, threshold, 255, 0)
+
+        ret, thresh = cv.threshold(gary, threshold, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+        # ret, thresh = cv.threshold(gary, threshold, 255, cv.THRESH_BINARY)
+        # thresh2 = cv.adaptiveThreshold(gary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2)
         contours, hierarchy = cv.findContours(thresh, 1, 2)
         cv.drawContours(np_ir, contours, -1, (255, 0, 0), 3)
         return np_ir, contours
@@ -352,6 +355,7 @@ class DemonProcess(object):
                         ir_np, contours = self.binary_image(np.array(ir_np))
                         if queue is not None:
                             queue.put(self.foot, block=False)
+                            self.foot.clear_current_info()
                         self.find_foot_ankle(ir_np, contours)
                         if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                             break

@@ -33,13 +33,9 @@ import multiprocessing
 
 def loop(control, matcher, pc, e):
     while True:
-        print("before wait")
         e.wait()
-        print("after wait start clear")
         e.clear()
-        print("after wairt")
         if pc.action_over:
-            print("why not im")
             if matcher.back or matcher.forward:
                 pc.action_forward_back(control)
                 matcher.clear_case()
@@ -50,22 +46,19 @@ def loop(control, matcher, pc, e):
 
 def loop2(matcher, queue, event):
     while True:
-        time.sleep(0.05)
+        time.sleep(0.25)
+        # print(queue.qsize())
         if not queue.empty():
+            print("assign")
             matcher.foot = queue.get(block=False)
-            matcher.detect_front_and_back_foot()
-            x, theta = matcher.detect_case()
-            print("x and theta matcher", x, theta)
-            pc.set_expect(x, theta)
-            event.set()
-            matcher.clear_expect()
-def loop2(matcher):
-    while True:
         matcher.detect_front_and_back_foot()
         x, theta = matcher.detect_case()
-        # print("x and theta", x, theta)
+        # print("x and theta matcher", x, theta)
         pc.set_expect(x, theta)
         event.set()
+        matcher.clear_expect()
+        matcher.clear_foot_and_leg()
+
 
 
 if __name__ == '__main__':

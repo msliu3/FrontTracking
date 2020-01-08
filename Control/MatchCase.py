@@ -35,7 +35,7 @@ class MatchCase(object):
         thread_start.start()
         # 因为footinformation不是已独立存在的类，所以这里选用传入的方式
         # self.foot = FootInformation.FootInformation()
-        self.foot = foot
+        self.foot = FootInformation.FootInformation()
         """
         下面是我需要得到的东西，期望的x和theta
         """
@@ -86,11 +86,12 @@ class MatchCase(object):
         :return:
         """
         self.clear_case()
+        # print("foot information", self.foot.left_line, self.foot.right_line)
+        print("Leg Information :",self.leg.left_leg_x,self.leg.right_leg_x)
         dis = (self.leg.left_leg_x + self.leg.right_leg_x) / 2
         if self.not_distinguish:
             if -0.15 < dis < 0.05:
                 self.rotate = True
-                # print(self.foot.left_line, self.foot.right_line)
                 print("rotate")
                 self.base_foot()
                 self.foot.assign_data_to_draw()
@@ -115,6 +116,8 @@ class MatchCase(object):
                 # self.draw_pic()
                 # print(self.leg.left_leg_x, self.leg.right_leg_x)
                 return self.expect_x, self.expect_theta
+            else:
+                print("No result   ")
         return 0, 0
 
     def go_back_or_forward(self, dis):
@@ -224,8 +227,6 @@ class MatchCase(object):
         else:
             self.distance_same = False
 
-
-
         # print("distance: the front foot is " + self.distance_flag, "is same: ", self.distance_same, " ",
         #       abs(self.leg.left_leg_x - self.leg.right_leg_x))
         self.step_distance = abs(self.leg.left_leg_x - self.leg.right_leg_x)
@@ -303,6 +304,10 @@ class MatchCase(object):
         self.forward = False
         self.turning = False
         self.back = False
+
+    def clear_foot_and_leg(self):
+        # self.foot.clear_current_info()
+        self.leg.clear_leg()
 
     def draw_pic(self):
         plt.figure(1)

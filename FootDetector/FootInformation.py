@@ -22,7 +22,7 @@ from threading import Thread
 
 
 class FootInformation(Thread):
-    def __init__(self,length =100):
+    def __init__(self, length=100):
         """
 
         :param np_ir:  source image
@@ -57,8 +57,6 @@ class FootInformation(Thread):
         self.foot_size_right_w = 0
         self.foot_size_right_h = 0
 
-        # 做控制的变量
-        self.base_line = 0.0
         pass
 
     def draw_and_obtain_element(self, np_ir, foot_pattern):
@@ -166,9 +164,28 @@ class FootInformation(Thread):
             new_list.append(list[i + 1] - list[i])
         return new_list
 
+    def clear_current_info(self):
+        self.left_rect = 0.0
+        self.right_rect = 0.0
+        self.left_line = 0.0
+        self.right_line = 0.0
+
+        # 记录两只脚的大小和位置
+        self.foot_position_left_x = 0
+        self.foot_position_left_y = 0
+        self.foot_size_left_w = 0
+        self.foot_size_left_h = 0
+
+        # center position
+        self.foot_position_right_x = 0
+        self.foot_position_right_y = 0
+        self.foot_size_right_w = 0
+        self.foot_size_right_h = 0
+        pass
+
 
 if __name__ == '__main__':
-    list1 = [4, 4, 4, 1, 4, 4, 4, 5,5]
+    list1 = [4, 4, 4, 1, 4, 4, 4, 5, 5]
     print(max(list1))
     list1.remove(5)
     print(list1)

@@ -129,7 +129,7 @@ class LegInformation(Thread):
             pass
         # print(result)
 
-    def clear_foot(self):
+    def clear_leg(self):
         self.left_leg_x = 0
         self.left_leg_y = 0
         self.right_leg_x = 0
@@ -144,7 +144,7 @@ class LegInformation(Thread):
         while True:
             time.sleep(2)
             if lx == self.left_leg_x or ly == self.left_leg_y or rx == self.right_leg_x or ry == self.right_leg_y:
-                self.clear_foot()
+                self.clear_leg()
             else:
                 lx = self.left_leg_x
                 ly = self.left_leg_y
@@ -157,8 +157,8 @@ class LegInformation(Thread):
         leg.listener_pose_2D()
         leg.listener_neo_marker()
         # It could be waste resource
-        thread_start = threading.Thread(target=leg.detect_has_a_human, args=())
-        thread_start.start()
+        # thread_start = threading.Thread(target=leg.detect_has_a_human, args=())
+        # thread_start.start()
         rospy.spin()
         pass
 

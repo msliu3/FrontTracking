@@ -19,9 +19,9 @@
 """
 import time
 from threading import Thread
-from robotserialcontrol import DigitalServoDriver as DsD
-from robotserialcontrol import DriverMonitor as DM
-from robotserialcontrol import odometry as odo
+from DigitalDriver import DigitalServoDriver_linux as DsD
+from DigitalDriver import DriverMonitor_zhuzhi as DM
+from DigitalDriver import odometry_zhuzhi as odo
 import serial
 import math
 
