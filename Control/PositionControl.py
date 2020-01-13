@@ -64,9 +64,9 @@ class PositionControl(object):
             pass
         else:
             if self.expect_theta > 0:
-                self.omega = 0.3
+                self.omega = 0.4
             else:
-                self.omega = -0.3
+                self.omega = -0.4
             rad = math.radians(self.expect_theta)
             self.running_time = abs(rad) / abs(self.omega)
         pass
@@ -116,9 +116,9 @@ class PositionControl(object):
 
     def design_path_forward_and_back(self):
         if self.expect_x < 0:
-            self.speed = -0.1
+            self.speed = -0.2
         elif self.expect_x > 0:
-            self.speed = 0.1
+            self.speed = 0.2
         else:
             self.clear_driver()
             return
