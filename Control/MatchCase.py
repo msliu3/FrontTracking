@@ -87,7 +87,7 @@ class MatchCase(object):
         """
         self.clear_case()
         # print("foot information", self.foot.left_line, self.foot.right_line)
-        print("Leg Information :",self.leg.left_leg_x,self.leg.right_leg_x)
+        # print("Leg Information :",self.leg.left_leg_x,self.leg.right_leg_x)
         dis = (self.leg.left_leg_x + self.leg.right_leg_x) / 2
         if self.not_distinguish:
             if -0.15 < dis < 0.05:
@@ -117,7 +117,7 @@ class MatchCase(object):
                 # print(self.leg.left_leg_x, self.leg.right_leg_x)
                 return self.expect_x, self.expect_theta
             else:
-                print("No result   ")
+                print("No result:not_dis:",self.not_distinguish," front:",self.front)
         return 0, 0
 
     def go_back_or_forward(self, dis):
@@ -227,8 +227,8 @@ class MatchCase(object):
         else:
             self.distance_same = False
 
-        # print("distance: the front foot is " + self.distance_flag, "is same: ", self.distance_same, " ",
-        #       abs(self.leg.left_leg_x - self.leg.right_leg_x))
+        print("distance: the front foot is " + self.distance_flag, "is same: ", self.distance_same, " ",
+              abs(self.leg.left_leg_x - self.leg.right_leg_x))
         self.step_distance = abs(self.leg.left_leg_x - self.leg.right_leg_x)
         return self.step_distance
 
