@@ -39,7 +39,7 @@ def singleton(cls, *args, **kw):
 @singleton
 class ControlDriver(Thread):
 
-    def __init__(self, radius_wheel=85.00, flag_end=0, radius=0, left_right=1):
+    def __init__(self, radius_wheel=85.00, flag_end=0, radius=0, left_right=0):
         # radius_wheel = 52.55
         Thread.__init__(self)
         driver = DsD.DigitalServoDriver(left_right=left_right)
