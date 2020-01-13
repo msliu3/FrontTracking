@@ -51,7 +51,7 @@ def select_contours(img, contours):
             foot = get_foot_ankle(item)
             temp.append(foot)
         cnt_list = temp
-        print("pass",result)
+        print("pass", result)
         return cnt_list
     elif len(cnt_list) >= 3:
         print("three", len(cnt_list))
@@ -79,6 +79,44 @@ def select_contours(img, contours):
     #     cnt_list.append(r)
     #     return cnt_list
     pass
+
+
+def select_contours_original(img, contours):
+    cnt_list = []
+    image_area = img.shape[0] * img.shape[1]
+    # print("total:", image_area)
+    for item in contours:
+        area = cv.contourArea(item)
+        rate = area / image_area
+        # print("area:", area, "rate", area / image_area)
+        if 0.01 < rate:
+            cnt_list.append(item)
+
+    # if len(cnt_list) >3:
+    #     return None
+
+    # if len(cnt_list) == 1:
+    #     print("only one")
+    #     point = get_convexity_point(cnt_list[0])
+    #     l, r = segmentation_two_feet(img, point)
+    #     cnt_list.pop(0)
+    #     cnt_list.append(l)
+    #     cnt_list.append(r)
+    #     return cnt_list
+
+    if len(cnt_list) == 2:
+        # print("two")
+        temp = []
+        for item in cnt_list:
+            foot = get_foot_ankle(item)
+            temp.append(foot)
+        cnt_list = temp
+        return cnt_list
+    else:
+        cnt_list.append(1)
+        cnt_list.append(2)
+        cnt_list.append(3)
+        return cnt_list
 
 
 def sort_contours(img, contours):
