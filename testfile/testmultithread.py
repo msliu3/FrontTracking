@@ -20,7 +20,7 @@ import DigitalDriver.ControlDriver as CD
 
 def loop(control):
     while True:
-        time.sleep(3)
+        time.sleep(5)
         temp = input("type: a->speed b->omega c->r clear end")
         if temp == "a":
             speed = input("speed")

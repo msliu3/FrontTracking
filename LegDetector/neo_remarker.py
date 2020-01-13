@@ -56,7 +56,7 @@ class ExtractLegDetector(object):
 
     def marker_callback(self, data):
         # this position is base line
-        if -0.3 < (data.pose.position.x - self.robot_x) < 0.46 and -0.18 < (
+        if -0.2 < (data.pose.position.x - self.robot_x) < 0.46 and -0.18 < (
                 data.pose.position.y - self.robot_y) < 0.18:
             try:
                 if data.text != "" and -0.6 < float(data.text) < 0.6:

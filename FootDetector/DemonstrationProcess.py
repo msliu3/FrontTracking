@@ -100,8 +100,6 @@ class DemonProcess(object):
         temp_data = self.__fix_pixel(temp_data, 6, 9)
         for i in temp_data:
             temperature.append(i)
-        max_temp = max(temp_data)
-        min_temp = min(temp_data)
 
         # 这是一个时间上的FIR，问题在于均值之后会出现结果值大于最大值的情况
         # filter_list.append(np.array(temp_data).reshape(24, 32))
@@ -112,6 +110,11 @@ class DemonProcess(object):
         is_foot = pf.detect_is_foot(temperature)
         if not is_foot:
             return None, None, False
+
+        temp_data = pf.filter_temperature(temp_data)
+        max_temp = max(temp_data)
+        min_temp = min(temp_data)
+        # temp_data = pf.filter_high_temperature(temp_data)
 
         result, flag, kmeans_env = pf.k_means_detect(temperature)
         # print("kmeans env:", kmeans_env)
@@ -172,7 +175,7 @@ class DemonProcess(object):
         theta_left, theta_right = -1, -1
         return theta_left, theta_right
 
-    def binary_image(self, np_ir, threshold=127):
+    def binary_image(self, np_ir, threshold=137):
         """
 
         threshold = 106可调
@@ -187,6 +190,7 @@ class DemonProcess(object):
         gary = cv.cvtColor(np_ir, cv.COLOR_BGR2GRAY)
 
         ret, thresh = cv.threshold(gary, threshold, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+        # 三种阈值选择的方法，全局阈值，动态阈值，二级化
         # ret, thresh = cv.threshold(gary, threshold, 255, cv.THRESH_BINARY)
         # thresh2 = cv.adaptiveThreshold(gary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2)
         contours, hierarchy = cv.findContours(thresh, 1, 2)

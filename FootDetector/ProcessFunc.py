@@ -26,12 +26,62 @@ def get_contours(filename, threshhold=97):
     else:
         img = filename
     img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    ret, thresh = cv.threshold(img_gray, threshhold, 255, 0)
+    ret, thresh = cv.threshold(img_gray, threshhold, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
     contours, hierarchy = cv.findContours(thresh, 2, 1)
     return img, contours
 
 
 def select_contours(img, contours):
+    cnt_list = sort_contours(img, contours)
+    if len(cnt_list) <= 1:
+        return cnt_list
+    elif len(cnt_list) == 2:
+        print("two")
+        temp = []
+        area1 = cv.contourArea(cnt_list[0])
+        area2 = cv.contourArea(cnt_list[1])
+        result = abs(area1 - area2) / area1
+        if 0.8 < result < 1:
+            cnt_list.append(2)
+            cnt_list.append(2)
+            cnt_list.append(2)
+            return cnt_list
+        for item in cnt_list:
+            print(cv.contourArea(item))
+            foot = get_foot_ankle(item)
+            temp.append(foot)
+        cnt_list = temp
+        print("pass", result)
+        return cnt_list
+    elif len(cnt_list) >= 3:
+        print("three", len(cnt_list))
+        temp = []
+        area1 = cv.contourArea(cnt_list[0])
+        area2 = cv.contourArea(cnt_list[1])
+        result = abs(area1 - area2) / area1
+        print(result)
+        if 0.5 < result < 1:
+            cnt_list.append(1)
+            return cnt_list
+        else:
+            for i in range(2):
+                foot = get_foot_ankle(cnt_list[i])
+                temp.append(foot)
+
+            cnt_list = temp
+            return cnt_list
+    # if len(cnt_list) == 1:
+    #     print("only one")
+    #     point = get_convexity_point(cnt_list[0])
+    #     l, r = segmentation_two_feet(img, point)
+    #     cnt_list.pop(0)
+    #     cnt_list.append(l)
+    #     cnt_list.append(r)
+    #     return cnt_list
+    pass
+
+
+def select_contours_original(img, contours):
     cnt_list = []
     image_area = img.shape[0] * img.shape[1]
     # print("total:", image_area)
@@ -67,6 +117,19 @@ def select_contours(img, contours):
         cnt_list.append(2)
         cnt_list.append(3)
         return cnt_list
+
+
+def sort_contours(img, contours):
+    cnt_list = []
+    image_area = img.shape[0] * img.shape[1]
+    # print("total:", image_area)
+    contours = sorted(contours, key=lambda x: len(x), reverse=True)
+    for item in contours:
+        area = cv.contourArea(item)
+        rate = area / image_area
+        # print("area:", area, "rate", rate)
+        cnt_list.append(item)
+    return cnt_list
 
 
 def segmentation_two_feet(img, convex_point):
@@ -290,3 +353,27 @@ def k_means_detect(temperature):
         return result, 0, env_max1
     else:
         return result, 1, env_max0
+
+
+def filter_temperature(temp, kernel_num=3):
+    # print(temp)
+    temp = np.array(temp).reshape(24, 32)
+    # show_temperature(temp)
+    kernel = np.ones((kernel_num, kernel_num), np.float) / (kernel_num ** 2)
+    res = cv.filter2D(temp, -1, kernel)
+    # show_temperature(res)
+    result = np.array(res).reshape(1, 24 * 32).tolist()[0]
+    return result
+
+
+def filter_high_temperature(temp):
+    # print(temp)
+    high = [0, -1, 0, -1, 4, -1, 0, -1, 0]
+    high_np = np.array(high).reshape(3, 3)
+    print(high_np)
+    temp = np.array(temp).reshape(24, 32)
+    # show_temperature(temp)
+    res = cv.filter2D(temp, -1, kernel=high_np)
+    show_temperature(res)
+    result = np.array(res).reshape(1, 24 * 32).tolist()[0]
+    return result

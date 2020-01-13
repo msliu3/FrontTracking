@@ -14,7 +14,8 @@ None
 """
 import threading
 from threading import Thread
-import LegDetector.LegInformation as LegLidar
+import LegLidar
+
 
 class LineDemo(Thread):
     def __init__(self):
@@ -32,7 +33,7 @@ class LineDemo(Thread):
 
         pass
 
-    def control_system(self, kp=0.016):
+    def control_system(self, kp=-0.016):
         temp_l = self.leg.left_leg_x
         temp_r = self.leg.right_leg_x
         # print("left_x : "+ str(temp_l)+" right_x : "+str(temp_r))
@@ -40,7 +41,7 @@ class LineDemo(Thread):
             error = self.base_line - temp_l
         else:
             error = self.base_line - temp_r
-        print("error:" + str(error))
+        # print("error:" + str(error))
         return error * kp
 
 

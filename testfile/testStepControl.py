@@ -28,7 +28,7 @@ def loop(control, pc):
             x = input("expect_x")
             theta = input("theta")
             pc.set_expect(float(x), float(theta))
-            pc.action_forward_and_turning(control)
+            pc.action(control)
 
         if temp == "end":
             print("end!!!")
