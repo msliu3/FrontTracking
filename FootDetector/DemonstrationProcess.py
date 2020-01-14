@@ -301,7 +301,7 @@ class DemonProcess(object):
 
         return
 
-    def demo_record(self, np_ir, mode='continuous'):
+    def demo_record(self, np_ir, mode='continuous', without="Demo"):
         """
 
         :param np_ir:
@@ -310,9 +310,10 @@ class DemonProcess(object):
         """
 
         # 在这里考虑一下如何，可以既填数又填string
-        cv.namedWindow("The IR data", 0)
-        cv.resizeWindow("The IR data", 32 * 30, 24 * 30)
-        cv.imshow("The IR data", np_ir)
+        if without == "Demo":
+            cv.namedWindow("The IR data", 0)
+            cv.resizeWindow("The IR data", 32 * 30, 24 * 30)
+            cv.imshow("The IR data", np_ir)
 
         self.out.write(np_ir)
         if cv.waitKey(1) == ord('q'):
@@ -361,6 +362,7 @@ class DemonProcess(object):
                             queue.put(self.foot, block=False)
                             self.foot.clear_current_info()
                         self.find_foot_ankle(ir_np, contours)
+                        print(self.foot.left_line, self.foot.right_line)
                         if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                             break
 

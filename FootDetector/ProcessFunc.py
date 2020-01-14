@@ -36,7 +36,7 @@ def select_contours(img, contours):
     if len(cnt_list) <= 1:
         return cnt_list
     elif len(cnt_list) == 2:
-        print("two")
+        # print("two")
         temp = []
         area1 = cv.contourArea(cnt_list[0])
         area2 = cv.contourArea(cnt_list[1])
@@ -47,19 +47,21 @@ def select_contours(img, contours):
             cnt_list.append(2)
             return cnt_list
         for item in cnt_list:
-            print(cv.contourArea(item))
+            # print(cv.contourArea(item))
             foot = get_foot_ankle(item)
             temp.append(foot)
         cnt_list = temp
-        print("pass", result)
+
+        # print("pass", result)
+
         return cnt_list
     elif len(cnt_list) >= 3:
-        print("three", len(cnt_list))
+        # print("three", len(cnt_list))
         temp = []
         area1 = cv.contourArea(cnt_list[0])
         area2 = cv.contourArea(cnt_list[1])
         result = abs(area1 - area2) / area1
-        print(result)
+        # print(result)
         if 0.5 < result < 1:
             cnt_list.append(1)
             return cnt_list
