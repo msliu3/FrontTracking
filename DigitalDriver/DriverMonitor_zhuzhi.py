@@ -66,7 +66,7 @@ class DriverMonitor:
         #转速
         RPM = data[-20:-16]
         temp = (RPM[1]<<8) + RPM[2]
-        temp = self.hex2int(temp)
+        temp = self.hex2int_8(temp)
         self.monitorData["RPM"] = temp / 6000 * 16384
 
         #位置给定
@@ -90,11 +90,19 @@ class DriverMonitor:
     def getFeedbackPos(self):
         return self.monitorData["FeedbackPosition"]
 
-        # 16进制 -> 有符号整型数
+        # 8位16进制 -> 有符号整型数
     def hex2int(self, data):
         sign_bit = (data & 0x80000000) >> 31
         if sign_bit == 1:
             result = (data - 1) ^ 0xFFFFFFFF
+            return -result
+        else:
+            return data
+
+    def hex2int_8(self, data):
+        sign_bit = (data & 0x8000) >> 15
+        if sign_bit == 1:
+            result = (data - 1) ^ 0xFFFF
             return -result
         else:
             return data

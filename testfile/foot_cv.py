@@ -59,8 +59,12 @@ for cnt in contours:
     box = cv.boxPoints(rect)
     box = np.int0(box)
     cv.drawContours(img, [box], 0, (0, 0, 255), 2)
-    l, r = pf.draw_min_line(img, np.array(foot))
-    print(l,r)
+    # l, r = pf.draw_min_line(img, np.array(foot))
+    # print(l,r)
 cv.imshow('img', img)
+try:
+    cv.imwrite("./test_cv_write1.png", img, [int(cv.IMWRITE_JPEG_QUALITY), 100])
+except:
+    print("error")
 cv.waitKey(0)
 cv.destroyAllWindows()

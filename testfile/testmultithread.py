@@ -15,7 +15,7 @@ None
 
 import threading
 import time
-import DigitalDriver.ControlDriver as CD
+import DigitalDriver.ControlDriver_zhuzhi as CD
 
 
 def loop(control):

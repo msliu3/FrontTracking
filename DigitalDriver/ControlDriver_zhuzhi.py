@@ -19,11 +19,13 @@
 """
 import time
 from threading import Thread
-from DigitalDriver import DigitalServoDriver_linux as DsD
+from DigitalDriver import DigitalServoDriver as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
 from DigitalDriver import odometry_zhuzhi as odo
+import matplotlib.pyplot as plt
 import serial
 import math
+
 
 def singleton(cls, *args, **kw):
     instances = {}
@@ -39,28 +41,35 @@ def singleton(cls, *args, **kw):
 @singleton
 class ControlDriver(Thread):
 
-    def __init__(self, radius_wheel=85.00, flag_end=0, radius=56, left_right=0):
+    def __init__(self, radius_wheel=85.00, flag_end=0, radius=0, left_right=1):
         # radius_wheel = 52.55
         Thread.__init__(self)
+        self.radius_wheel = radius_wheel
+        self.flag_end = flag_end
+        self.radius = radius
+        self.speed = 0.05
+        self.omega = 0
+        self.position = [0.0, 0.0, 0.0]
+        self.count = 0
         driver = DsD.DigitalServoDriver(left_right=left_right)
         self.left_right = left_right
         baud_rate = driver.baud_rate
-        self.monitor_l = DM.DriverMonitor()
-        self.monitor_r = DM.DriverMonitor()
-        #=================================================================================
         self.ser_l = serial.Serial(driver.left, baud_rate, timeout=None)
         self.ser_r = serial.Serial(driver.right, baud_rate, timeout=None)
-        self.count = 0
+        self.monitor_l = DM.DriverMonitor()
+        self.monitor_r = DM.DriverMonitor()
+        self.plot_x = [0.0]
+        self.plot_y = [0.0]
 
-        self.ser_l.reset_input_buffer()
+        # 初始化时读取一次驱动器监控信息，记录初始时encoder位置
+        # 读取左轮监控信息
         self.ser_l.write(bytes([0x80, 0x00, 0x80]))
         read_byte_l = self.ser_l.read(5)
         if read_byte_l[4] == 0x80:
             read_byte_l += self.ser_l.read(31)
         else:
             read_byte_l += self.ser_l.read(27)
-
-        self.ser_r.reset_input_buffer()
+        # 读取右轮监控信息
         self.ser_r.write(bytes([0x80, 0x00, 0x80]))
         read_byte_r = self.ser_r.read(5)
         if read_byte_r[4] == 0x80:
@@ -68,23 +77,18 @@ class ControlDriver(Thread):
         else:
             read_byte_r += self.ser_r.read(27)
 
+        # 初始化Odometry
         self.motorStatus_l = self.monitor_l.processData(read_byte_l)
         self.motorStatus_r = self.monitor_r.processData(read_byte_r)
+        print('-------------------------------------------------------------------------------------------------------')
+        print('Initial LEFT monitor: ', self.motorStatus_l)
+        print('Initial RIGHT monitor:', self.motorStatus_r)
         Odo_l_init = self.motorStatus_l['FeedbackPosition']
         Odo_r_init = self.motorStatus_r['FeedbackPosition']
         print('init: ', Odo_l_init, Odo_r_init)
-        self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init,plot=False)
-        #=================================================================================
-        self.radius_wheel = radius_wheel
-        self.flag_end = flag_end
-        self.radius = radius
-        self.speed = 0
-        self.omega = -0.1
-        self.motorStatus_l = dict()
-        self.motorStatus_r = dict()
-        self.position = [0.0, 0.0, 0.0]
-        time.sleep(3)
-        #print('-------------------start----------------------')
+        print('-------------------------------------------------------------------------------------------------------')
+        self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
+        time.sleep(2)
 
     def get_rpm_byte(self, rpm):
         rpm_byte = [0x06, 0x00, 0x88, 0x8e]
@@ -108,7 +112,9 @@ class ControlDriver(Thread):
         return rpm_byte
 
     def get_speed_rpm(self, w):
-        rpm = (self.speed + w) / (2 * math.pi * self.radius_wheel / 1000) * 60
+        # ?first version
+        # rpm = (self.speed + w) / (2 * math.pi * self.radius_wheel / 1000) * 60
+        rpm = w / (2 * math.pi * self.radius_wheel / 1000) * 60
         # print(int(rpm))
         return int(rpm)
 
@@ -120,92 +126,132 @@ class ControlDriver(Thread):
         :return:
         """
         if self.omega > 0:
-            vl = (self.radius - (74 / 2)) / 100 * self.omega
-            vr = (self.radius + (74 / 2)) / 100 * self.omega
+            vl = (self.radius + (56 / 2)) / 100 * self.omega
+            vr = (self.radius - (56 / 2)) / 100 * self.omega
         else:
-            vl = -(self.radius + (74 / 2)) / 100 * self.omega
-            vr = -(self.radius - (74 / 2)) / 100 * self.omega
+            vl = -(self.radius - (56 / 2)) / 100 * self.omega
+            vr = -(self.radius + (56 / 2)) / 100 * self.omega
+
         return vl, vr
 
     def control_part(self):
-
-        print("start control part")
+        print("\n===================================== Start control part! =====================================")
         start = [0x00, 0x00, 0x01, 0x01]
         pc_mode = [0x02, 0x00, 0xc4, 0xc6]
-        rpm = [0x06, 0x00, 0x88, 0x8e]
         end = [0x00, 0x00, 0x00, 0x00]
         self.ser_l.write(bytes(start))
+        self.ser_l.read(2)
         self.ser_r.write(bytes(start))
+        self.ser_r.read(2)
         self.ser_l.write(bytes(pc_mode))
+        self.ser_l.read(2)
         self.ser_r.write(bytes(pc_mode))
-        #self.ser_l.write(bytes(end))
-        #self.ser_r.write(bytes(end))
+        self.ser_r.read(2)
+
+        self.stopMotor()
 
         while True:
+            # print('\n------------------------------------------ Frame ', self.count,
+            #       '-------------------------------------------')
+            # 读取驱动器监控信息
             vl, vr = self.get_rpm_Omega()
-            # print(vl, vr)
+            # print("Omega: %f %f" %( vl, vr))
+            # print("Speed: %f " % self.speed)
             if self.left_right == 1:
                 left = self.get_rpm_byte(self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed))
                 right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
             else:
+                # print((self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed)))
                 left = self.get_rpm_byte((self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed)))
                 right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
-            # print(right)
+            # print(left, right)
             self.ser_l.write(bytes(left))
+            self.ser_l.read(2)
             self.ser_r.write(bytes(right))
-            time.sleep(0.1)
-
-            # 读取驱动器监控信息
+            self.ser_r.read(2)
+            time.sleep(0.3)
             watch = [0x80, 0x00, 0x80]
-            #左轮
-            self.ser_l.reset_input_buffer()
+            # 左轮
             self.ser_l.write(bytes(watch))
             read_byte_l = self.ser_l.read(5)
             if read_byte_l[4] == 0x80:
                 read_byte_l += self.ser_l.read(31)
             else:
                 read_byte_l += self.ser_l.read(27)
-            #print('Read message from LEFT: ',read_byte_l)
-            #print('                   ==>: ', list(read_byte_l))
 
-            #右轮
-            self.ser_r.reset_input_buffer()
+            # 右轮
             self.ser_r.write(bytes(watch))
             read_byte_r = self.ser_r.read(5)
             if read_byte_r[4] == 0x80:
                 read_byte_r += self.ser_r.read(31)
             else:
                 read_byte_r += self.ser_r.read(27)
-            #print('Read message from RIGHT:', read_byte_r)
-            #print('                   ==>: ', list(read_byte_r))
 
             if self.left_right == 1:
-                self.motorStatus_l = self.monitor_l.processData(read_byte_l)
-                self.motorStatus_r = self.monitor_r.processData(read_byte_r)
-            else:
                 self.motorStatus_l = self.monitor_l.processData(read_byte_r)
                 self.motorStatus_r = self.monitor_r.processData(read_byte_l)
+            else:
+                self.motorStatus_l = self.monitor_l.processData(read_byte_l)
+                self.motorStatus_r = self.monitor_r.processData(read_byte_r)
 
             self.odo.Odo_l = self.motorStatus_l['FeedbackPosition']
             self.odo.Odo_r = self.motorStatus_r['FeedbackPosition']
 
-            print('LEFT monitor:', self.motorStatus_l)
-            print('RIGHT monitor:', self.motorStatus_r)
-            print('\n----------------------------------------------\n')
+            # print('LEFT monitor: ', self.motorStatus_l)
+            # print('RIGHT monitor:', self.motorStatus_r)
+
+            # 更新位置
             self.position = self.odo.updatePose(-self.odo.Odo_l, self.odo.Odo_r)
+            # print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm; THETA=', self.position[2] / math.pi * 180, '°;')
 
-            #若有故障
+            if math.sqrt((self.position[0] - self.plot_x[-1]) ** 2 + (self.position[1] - self.plot_y[-1]) ** 2) > 0.1:
+                self.plot_x.append(self.position[0])
+                self.plot_y.append(self.position[1])
+
+            # 若有故障
             if self.motorStatus_l["Malfunction"] or self.motorStatus_r["Malfunction"]:
-                print('Left motor malfunction:' + self.motorStatus_l["Malfunction"])
-                print('Right motor malfunction: ' + self.motorStatus_r["Malfunction"])
+                # print('Left motor malfunction:  ' + self.motorStatus_l["Malfunction"])
+                # print('Right motor malfunction: ' + self.motorStatus_r["Malfunction"])
+
                 self.flag_end = 1
+            print(time.strftime("%H:%M:%S", time.localtime()),math.degrees(self.odo.THETA))
+            # if self.flag_end != 0 or self.count>500:
+            #     break
 
-            if self.flag_end != 0:
-                break
+            self.count += 1
 
-        self.ser_l.write(bytes(end))
-        self.ser_r.write(bytes(end))
+        self.stopMotor()
+        plt.scatter(self.plot_x, self.plot_y)
+        plt.show()
         return
+
+    def stopMotor(self):
+        # 写入停止电机命令[0x00, 0x00, 0x00, 0x00]后，驱动器读到的第一帧数据可能会出现如下错误，后续数据都正常
+        # {'ONorOFF': True, 'Malfunction': '', 'InputVoltage': 128, 'OutputCurrent': 329.93, 'RPM': 7607.637333333333, 'GivenPosition': -270211866, 'FeedbackPosition': -421009432}
+        # 因此此处需要抛弃第一帧数据
+        end = [0x00, 0x00, 0x00, 0x00]
+        self.ser_l.write(bytes(end))
+        self.ser_l.read(2)
+        self.ser_r.write(bytes(end))
+        self.ser_r.read(2)
+
+        # 读取一帧驱动器监控信息
+        watch = [0x80, 0x00, 0x80]
+        # 左轮
+        self.ser_l.write(bytes(watch))
+        read_byte_l = self.ser_l.read(5)
+        if read_byte_l[4] == 0x80:
+            read_byte_l += self.ser_l.read(31)
+        else:
+            read_byte_l += self.ser_l.read(27)
+
+        # 右轮
+        self.ser_r.write(bytes(watch))
+        read_byte_r = self.ser_r.read(5)
+        if read_byte_r[4] == 0x80:
+            read_byte_r += self.ser_r.read(31)
+        else:
+            read_byte_r += self.ser_r.read(27)
 
     def run(self):
         self.control_part()
@@ -214,10 +260,5 @@ class ControlDriver(Thread):
 
 
 if __name__ == '__main__':
-    def loop(cd):
-        time.sleep(10)
-        cd.flag_end = 1
-
     cd = ControlDriver()
     cd.start()
-

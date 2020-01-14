@@ -19,6 +19,7 @@ import cv2 as cv
 from FootDetector import ProcessFunc as pf, FootInformation as foot
 
 from FootDetector.IRCamera import IRCamera
+import time
 
 
 def singleton(cls, *args, **kw):
@@ -36,10 +37,13 @@ def singleton(cls, *args, **kw):
 class DemonProcess(object):
     head_size = 4
     resource = os.path.abspath(
-        os.path.dirname(os.path.abspath(__file__)) + os.path.sep + ".." + os.path.sep + "resource") + "/output.avi"
-    print(resource)
+        os.path.dirname(os.path.abspath(__file__)) + os.path.sep + ".." + os.path.sep + "resource")
+    resource_video = resource + os.path.sep + "output.avi"
+    resource_img = resource + os.path.sep + "output_npdata"
+    print(resource_video)
+    print(resource_img)
 
-    def __init__(self, scope=30, fps=5, output_path=resource):
+    def __init__(self, scope=30, fps=5, output_path=resource_video, output_image=resource_img):
         self.env = -1
         self.scope = scope
         self.ir_array_data = np.array((32 * self.scope, 24 * self.scope))
@@ -51,6 +55,7 @@ class DemonProcess(object):
         self.out = cv.VideoWriter(output_path, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'), fps,
                                   (32 * self.scope, 24 * self.scope))
         self.foot = foot.FootInformation()
+        self.output_image = output_image
         return
 
     def check_head_data(self, head_data):
@@ -317,7 +322,7 @@ class DemonProcess(object):
 
         self.out.write(np_ir)
         if cv.waitKey(1) == ord('q'):
-            self.foot.draw_pic()
+            # self.foot.draw_pic()
             self.out.release()
             cv.destroyAllWindows()
             self.serial.close()
@@ -354,7 +359,8 @@ class DemonProcess(object):
                     if foot_flag:
                         # filter is effective
                         ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=16)
-
+                        # print(self.output_image + os.path.sep + time.strftime("%H:%M:%S", time.localtime()) + ".jpg")
+                        cv.imwrite("../resource/output_npdata/"+ time.strftime("%H-%M-%S", time.localtime()) + ".jpg",ir_np)
                         # pf.show_temperature(temp)
                         # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.8)
                         ir_np, contours = self.binary_image(np.array(ir_np))
@@ -362,7 +368,7 @@ class DemonProcess(object):
                             queue.put(self.foot, block=False)
                             self.foot.clear_current_info()
                         self.find_foot_ankle(ir_np, contours)
-                        print(self.foot.left_line, self.foot.right_line)
+                        print(time.strftime("%H:%M:%S", time.localtime()), self.foot.left_line, self.foot.right_line)
                         if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                             break
 
