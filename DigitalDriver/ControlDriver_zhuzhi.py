@@ -55,8 +55,8 @@ class ControlDriver(Thread):
         driver = DsD.DigitalServoDriver(left_right=left_right)
         self.left_right = left_right
         baud_rate = driver.baud_rate
-        self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.1)
-        self.ser_r = serial.Serial(driver.right, baud_rate, timeout=0.1)
+        self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.05)
+        self.ser_r = serial.Serial(driver.right, baud_rate, timeout=0.05)
         self.monitor_l = DM.DriverMonitor()
         self.monitor_r = DM.DriverMonitor()
         self.plot_x = [0.0]
@@ -149,7 +149,7 @@ class ControlDriver(Thread):
         self.ser_r.write(bytes(pc_mode))
         self.ser_r.read(2)
 
-        # self.stopMotor()
+        self.stopMotor()
 
         while True:
             # print('\n------------------------------------------ Frame ', self.count,
@@ -208,7 +208,7 @@ class ControlDriver(Thread):
 
                 # 更新位置
                 self.position = self.odo.updatePose(-self.odo.Odo_l, self.odo.Odo_r)
-                print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm; THETA=', self.position[2] / math.pi * 180, '°;')
+                # print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm; THETA=', self.position[2] / math.pi * 180, '°;')
 
                 if math.sqrt(
                         (self.position[0] - self.plot_x[-1]) ** 2 + (self.position[1] - self.plot_y[-1]) ** 2) > 0.1:
@@ -221,10 +221,13 @@ class ControlDriver(Thread):
                     # print('Right motor malfunction: ' + self.motorStatus_r["Malfunction"])
                     self.flag_end = 1
 
-                # print(datetime.datetime.now(), math.degrees(self.odo.THETA))
+                # print("%f\t%f\t%f\t%f" % (time.time(), math.degrees(self.odo.THETA),self.position[0],self.position[1]))
+                print(
+                    "%f\t%f\t%f\t%f\t%f" % (
+                    time.time(), self.odo.get_dxdydtheta()[0], self.odo.get_dxdydtheta()[1], self.odo.getROS_XYTHETA()[0],
+                    self.odo.getROS_XYTHETA()[1]))
             except IndexError as i:
                 print(i)
-
 
             # if self.flag_end != 0 or self.count>500:
             #     break
