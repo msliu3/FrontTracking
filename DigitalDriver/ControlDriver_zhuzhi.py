@@ -48,7 +48,7 @@ class ControlDriver(Thread):
         self.radius_wheel = radius_wheel
         self.flag_end = flag_end
         self.radius = radius
-        self.speed = 0.1
+        self.speed = 0
         self.omega = 0
         self.position = [0.0, 0.0, 0.0]
         self.count = 0
@@ -89,7 +89,7 @@ class ControlDriver(Thread):
         print('init: ', Odo_l_init, Odo_r_init)
         print('-------------------------------------------------------------------------------------------------------')
         self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
-        time.sleep(2)
+        # time.sleep(2)
 
     def get_rpm_byte(self, rpm):
         rpm_byte = [0x06, 0x00, 0x88, 0x8e]
@@ -168,70 +168,64 @@ class ControlDriver(Thread):
             # print(left, right)
             self.ser_l.write(bytes(left))
             self.ser_l.flush()
-            print("test_stop:","ser_l read")
             self.ser_l.read(2)
             self.ser_r.write(bytes(right))
             self.ser_r.flush()
-            print("test_stop:", "ser_r read")
             self.ser_r.read(2)
             time.sleep(0.2)
-            watch = [0x80, 0x00, 0x80]
-            # 左轮
-            self.ser_l.write(bytes(watch))
-            self.ser_l.flush()
-            print("test_stop:", "read state left5",self.ser_l.readable())
-            read_byte_l = self.ser_l.read(4)
-            temp = 0
-            if self.ser_l.readable():
-                temp = self.ser_l.read()
-            if temp == 0x80:
-                read_byte_l += self.ser_l.read(31)
-            else:
-                print("left:", self.ser_l.readable())
-                read_byte_l += self.ser_l.read(27)
+            try:
+                watch = [0x80, 0x00, 0x80]
+                # 左轮
+                self.ser_l.write(bytes(watch))
+                self.ser_l.flush()
+                read_byte_l = self.ser_l.read(5)
+                if read_byte_l[4] == 0x80:
+                    read_byte_l += self.ser_l.read(31)
+                else:
+                    read_byte_l += self.ser_l.read(27)
 
-            # 右轮
-            self.ser_r.write(bytes(watch))
-            self.ser_r.flush()
-            print("test_stop:", "read state right5",self.ser_r.readable())
-            read_byte_r = self.ser_r.read(4)
-            print(read_byte_r.hex())
-            if self.ser_r.readable():
-                temp = self.ser_r.read()
-            if temp == 0x80:
-                read_byte_r += self.ser_r.read(31)
-            else:
-                print("right:",self.ser_r.readable())
-                read_byte_r += self.ser_r.read(27)
+                # 右轮
+                self.ser_r.write(bytes(watch))
+                self.ser_r.flush()
+                read_byte_r = self.ser_r.read(5)
+                if read_byte_r[4] == 0x80:
+                    read_byte_r += self.ser_r.read(31)
+                else:
+                    read_byte_r += self.ser_r.read(27)
 
-            if self.left_right == 1:
-                self.motorStatus_l = self.monitor_l.processData(read_byte_r)
-                self.motorStatus_r = self.monitor_r.processData(read_byte_l)
-            else:
-                self.motorStatus_l = self.monitor_l.processData(read_byte_l)
-                self.motorStatus_r = self.monitor_r.processData(read_byte_r)
+                if self.left_right == 1:
+                    self.motorStatus_l = self.monitor_l.processData(read_byte_r)
+                    self.motorStatus_r = self.monitor_r.processData(read_byte_l)
+                else:
+                    self.motorStatus_l = self.monitor_l.processData(read_byte_l)
+                    self.motorStatus_r = self.monitor_r.processData(read_byte_r)
 
-            self.odo.Odo_l = self.motorStatus_l['FeedbackPosition']
-            self.odo.Odo_r = self.motorStatus_r['FeedbackPosition']
+                self.odo.Odo_l = self.motorStatus_l['FeedbackPosition']
+                self.odo.Odo_r = self.motorStatus_r['FeedbackPosition']
 
-            # print('LEFT monitor: ', self.motorStatus_l)
-            # print('RIGHT monitor:', self.motorStatus_r)
+                # print('LEFT monitor: ', self.motorStatus_l)
+                # print('RIGHT monitor:', self.motorStatus_r)
 
-            # 更新位置
-            self.position = self.odo.updatePose(-self.odo.Odo_l, self.odo.Odo_r)
-            # print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm; THETA=', self.position[2] / math.pi * 180, '°;')
+                # 更新位置
+                self.position = self.odo.updatePose(-self.odo.Odo_l, self.odo.Odo_r)
+                print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm; THETA=', self.position[2] / math.pi * 180, '°;')
 
-            if math.sqrt((self.position[0] - self.plot_x[-1]) ** 2 + (self.position[1] - self.plot_y[-1]) ** 2) > 0.1:
-                self.plot_x.append(self.position[0])
-                self.plot_y.append(self.position[1])
+                if math.sqrt(
+                        (self.position[0] - self.plot_x[-1]) ** 2 + (self.position[1] - self.plot_y[-1]) ** 2) > 0.1:
+                    self.plot_x.append(self.position[0])
+                    self.plot_y.append(self.position[1])
 
-            # 若有故障
-            if self.motorStatus_l["Malfunction"] or self.motorStatus_r["Malfunction"]:
-                # print('Left motor malfunction:  ' + self.motorStatus_l["Malfunction"])
-                # print('Right motor malfunction: ' + self.motorStatus_r["Malfunction"])
-                self.flag_end = 1
+                # 若有故障
+                if self.motorStatus_l["Malfunction"] or self.motorStatus_r["Malfunction"]:
+                    # print('Left motor malfunction:  ' + self.motorStatus_l["Malfunction"])
+                    # print('Right motor malfunction: ' + self.motorStatus_r["Malfunction"])
+                    self.flag_end = 1
 
-            # print(datetime.datetime.now(),math.degrees(self.odo.THETA))
+                # print(datetime.datetime.now(), math.degrees(self.odo.THETA))
+            except IndexError as i:
+                print(i)
+
+
             # if self.flag_end != 0 or self.count>500:
             #     break
 

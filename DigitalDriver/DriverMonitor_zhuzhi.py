@@ -13,12 +13,14 @@
 处理并记录在一个dictionary中返回
 
 """
+
+
 class DriverMonitor:
 
     def __init__(self):
         self.receivedByte = bytes()
         self.monitorData = {
-            "ONorOFF": bool(),      #'ON'-True, 'OFF'-False
+            "ONorOFF": bool(),  # 'ON'-True, 'OFF'-False
             "Malfunction": '',
             "InputVoltage": 0,
             "OutputCurrent": 0.0,
@@ -32,7 +34,7 @@ class DriverMonitor:
         self.receivedByte = receivedBytes
         data = list(self.receivedByte)
 
-        #电机状态
+        # 电机状态
         self.monitorData["ONorOFF"] = bool(data[2])
 
         # 故障信息
@@ -54,32 +56,32 @@ class DriverMonitor:
             else:
                 self.monitorData["Malfunction"] = None
 
-        #母线电压
+        # 母线电压
         inputVoltage = data[-28:-24]
-        self.monitorData["InputVoltage"] = (inputVoltage[1]<<8) + inputVoltage[2]
+        self.monitorData["InputVoltage"] = (inputVoltage[1] << 8) + inputVoltage[2]
 
-        #输出电流
+        # 输出电流
         outputCurrent = data[-24:-20]
-        temp = (outputCurrent[1]<<8) + outputCurrent[2]
+        temp = (outputCurrent[1] << 8) + outputCurrent[2]
         self.monitorData["OutputCurrent"] = temp / 100
 
-        #转速
+        # 转速
         RPM = data[-20:-16]
-        temp = (RPM[1]<<8) + RPM[2]
+        temp = (RPM[1] << 8) + RPM[2]
         temp = self.hex2int_8(temp)
         self.monitorData["RPM"] = temp / 6000 * 16384
 
-        #位置给定
+        # 位置给定
         GivenPosH = data[-16:-12]
         GivenPosL = data[-12:-8]
-        temp_H = (GivenPosH[1]<<8) + GivenPosH[2]
-        temp_L = (GivenPosL[1]<<8) + GivenPosL[2]
+        temp_H = (GivenPosH[1] << 8) + GivenPosH[2]
+        temp_L = (GivenPosL[1] << 8) + GivenPosL[2]
         temp = (temp_H << 16) + temp_L
         self.monitorData["GivenPosition"] = self.hex2int(temp)
 
-        #位置反馈
+        # 位置反馈
         FeedbackPosH = data[-8:-4]
-        FeedbackPosL = data[-4: ]
+        FeedbackPosL = data[-4:]
         temp_H = (FeedbackPosH[1] << 8) + FeedbackPosH[2]
         temp_L = (FeedbackPosL[1] << 8) + FeedbackPosL[2]
         temp = (temp_H << 16) + temp_L
@@ -91,6 +93,7 @@ class DriverMonitor:
         return self.monitorData["FeedbackPosition"]
 
         # 8位16进制 -> 有符号整型数
+
     def hex2int(self, data):
         sign_bit = (data & 0x80000000) >> 31
         if sign_bit == 1:

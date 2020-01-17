@@ -15,15 +15,20 @@ None
 
 # import lib
 import serial
-ser_l = serial.Serial("COM14", 57600, timeout=None)
+
+ser_l = serial.Serial("COM14", 57600, timeout=1)
 start = [0x00, 0x00, 0x01, 0x01]
 ser_l.write(bytes(start))
 list_data = []
-for i in range(2):
-    if ser_l.readable():
-        data = ser_l.read()
-        print(data)
-        list_data.append(data)
-    else:
-        print("no read")
-print(list_data)
+# for i in range(2):
+#     if ser_l.readable():
+#         data = ser_l.read()
+#         print(data)
+#         list_data.append(data)
+#     else:
+#         print("no read")
+# print(list_data)
+try:
+    ser_l.read(2)
+finally:
+    print("no read data")
