@@ -20,7 +20,7 @@
 import datetime
 import time
 from threading import Thread
-from DigitalDriver import DigitalServoDriver as DsD
+from DigitalDriver import DigitalServoDriver_linux as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
 from DigitalDriver import odometry_zhuzhi as odo
 import matplotlib.pyplot as plt
@@ -222,10 +222,10 @@ class ControlDriver(Thread):
                     self.flag_end = 1
 
                 # print("%f\t%f\t%f\t%f" % (time.time(), math.degrees(self.odo.THETA),self.position[0],self.position[1]))
-                print(
-                    "%f\t%f\t%f\t%f\t%f" % (
-                    time.time(), self.odo.get_dxdydtheta()[0], self.odo.get_dxdydtheta()[1], self.odo.getROS_XYTHETA()[0],
-                    self.odo.getROS_XYTHETA()[1]))
+                # print(
+                #     "%f\t%f\t%f\t%f\t%f" % (
+                #     time.time(), self.odo.get_dxdydtheta()[0], self.odo.get_dxdydtheta()[1], self.odo.getROS_XYTHETA()[0],
+                #     self.odo.getROS_XYTHETA()[1]))
             except IndexError as i:
                 print(i)
 
