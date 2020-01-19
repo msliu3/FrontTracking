@@ -43,7 +43,7 @@ def singleton(cls, *args, **kw):
 
 @singleton
 class LegInformation(Thread):
-    def __init__(self, length=15):
+    def __init__(self, length=50):
         Thread.__init__(self)
         self.left_leg_x = 0.0
         self.left_leg_y = 0.0
