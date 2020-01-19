@@ -6,6 +6,7 @@
         <entryData>
           <resourceRoots>
             <path value="file://$PROJECT_DIR$/resource" />
+            <path value="file://$PROJECT_DIR$/resource/output_npdata" />
           </resourceRoots>
         </entryData>
       </entry>

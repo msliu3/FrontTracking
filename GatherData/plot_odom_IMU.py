@@ -68,11 +68,11 @@ if __name__ == '__main__':
     imu_data = read_file_to_list(IMU_file)
     print(imu_data)
     dif_imu = difference_list(imu_data)
-
-    plt.plot(dif_odo)
-    # plt.plot(dif_imu)
+    #
+    # plt.plot(dif_odo)
+    # # plt.plot(dif_imu)
     plt.plot(odo_data, color="r")
-    # plt.plot(imu_data, color="b")
+    plt.plot(imu_data, color="b")
     plt.show()
 
     # listFromLine = list(map(strToFloat, imu))

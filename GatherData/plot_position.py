@@ -51,5 +51,7 @@ if __name__ == '__main__':
     plt.plot(a_Y, a_X, ls="-.")
     plt.plot(l_Y,l_X)
     plt.plot(r_Y,r_X)
+    plt.figure(2)
+    plt.plot(a_Y, a_X, ls="-.")
     plt.show()
     print(float("-0.1"))
