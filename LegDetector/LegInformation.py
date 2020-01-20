@@ -58,6 +58,39 @@ class LegInformation(Thread):
         self.prev_data_y = []
         self.prev_data_length = length
         rospy.init_node('neo_get_leg_node', anonymous=True)
+        self.prev_leg =[
+                        -0.13231158,
+                        0.09736817,
+                        -0.12490384,
+                        0.09615281,
+                        -0.12326501,
+                        0.08969253,
+                        -0.13799247,
+                        0.10617598,
+                        -0.11245747,
+                        0.14171072,
+                        -0.09778179,
+                        -0.15025203,
+                        0.16142259,
+                        -0.08951196,
+                        0.17213701,
+                        -0.08138719,
+                        0.16241966,
+                        -0.08664881,
+                        0.15453492,
+                        -0.08944231,
+                        0.15214336,
+                        -0.09137838,
+                        0.11405817,
+                        -0.09202546,
+                        0.13354793,
+                        -0.09606664,
+                        0.14175811,
+                        -0.09467949,
+                        0.15366877,
+                        -0.09725611,
+                                    ]
+
         print("It has been started LegInformation")
         pass
 
@@ -106,9 +139,14 @@ class LegInformation(Thread):
         self.prev_data.append(temp_y)
         if len(self.prev_data) > self.prev_data_length:
             self.prev_data.pop(0)
-        temp_np = np.array(self.prev_data).reshape(-1, 1)
-        if len(self.prev_data) == 1:
-            return
+        self.prev_data.pop(-1)
+        temp_list = self.prev_data
+        self.prev_data.append(temp_y)
+        temp_list.extend(self.prev_leg)
+        temp_list.append(temp_y)
+        temp_np = np.array(temp_list).reshape(-1, 1)
+        # if len(self.prev_data) == 1:
+        #     return
         # print(temp_np)
         result = KMeans(n_clusters=2).fit_predict(temp_np)
         sum_flag0 = 0
@@ -136,7 +174,6 @@ class LegInformation(Thread):
                 self.right_leg_x = temp_x
                 self.right_leg_y = temp_y
                 # print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
-            pass
         # print(result)
 
     def clear_leg(self):
@@ -160,7 +197,6 @@ class LegInformation(Thread):
                 ly = self.left_leg_y
                 rx = self.right_leg_x
                 ry = self.right_leg_y
-
 
     def loop(self):
         leg = LegInformation()
