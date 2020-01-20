@@ -139,14 +139,14 @@ class LegInformation(Thread):
         self.prev_data.append(temp_y)
         if len(self.prev_data) > self.prev_data_length:
             self.prev_data.pop(0)
-        self.prev_data.pop(-1)
-        temp_list = self.prev_data
-        self.prev_data.append(temp_y)
-        temp_list.extend(self.prev_leg)
-        temp_list.append(temp_y)
-        temp_np = np.array(temp_list).reshape(-1, 1)
-        # if len(self.prev_data) == 1:
-        #     return
+        # self.prev_data.pop(-1)
+        # temp_list = self.prev_data
+        # self.prev_data.append(temp_y)
+        # temp_list.extend(self.prev_leg)
+        # temp_list.append(temp_y)
+        temp_np = np.array(self.prev_data).reshape(-1, 1)
+        if len(self.prev_data) == 1:
+            return
         # print(temp_np)
         result = KMeans(n_clusters=2).fit_predict(temp_np)
         sum_flag0 = 0

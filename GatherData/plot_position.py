@@ -57,15 +57,15 @@ if __name__ == '__main__':
         new_item[0][1] = item[7]
         new_item[1][1] = item[8]
         new_xy_item = np.dot(trans_matrix_inv, new_item)
-        l_X.append(item[1]+new_xy_item[0][0])
-        l_Y.append(item[2]+new_xy_item[1][0])
-        r_X.append(item[1]+new_xy_item[0][1])
-        r_Y.append(item[2]+new_xy_item[1][1])
+        l_X.append(item[5]) #item[1]+new_xy_item[0][0]
+        l_Y.append(item[6]) #item[2]+new_xy_item[1][0]
+        r_X.append(item[7]) #item[1]+new_xy_item[0][1]
+        r_Y.append(item[8]) #item[2]+new_xy_item[1][1]
     plt.figure(1)
-    plt.plot(a_Y, a_X, ls="-.")
+    plt.plot(a_X, a_Y, ls="-.")
     plt.plot(l_Y,l_X)
     plt.plot(r_Y,r_X)
     plt.figure(2)
-    plt.plot(a_Y, a_X, ls="-.")
+    plt.plot(a_X, a_Y, ls="-.")
     plt.show()
     print(float("-0.1"))
