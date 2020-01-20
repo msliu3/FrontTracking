@@ -16,6 +16,7 @@ None
 # import lib
 import serial
 import serial.tools.list_ports
+import re
 
 
 def print_serial(port):
@@ -52,11 +53,33 @@ def detect_serials(description, vid=0x10c4, pid=0xea60):
     #     这里我还不知道vid和pid是什么东西
     return None
 
+
+class ArduinoRead(object):
+    def __init__(self):
+        port_name = detect_serials(description="Arduino Mega 2560 (COM15)")
+        baud_rate = 115200
+        print(port_name, baud_rate)
+        self.serial = serial.Serial(port_name, baud_rate, timeout=None)
+        self.imu_human = 0.0
+        self.imu_robot = 0.0
+        self.terminal_flage = False
+        pass
+
+    def terminal_thread(self):
+        self.terminal_flage = True
+        pass
+
+    def reading_data_from_arduino(self):
+        while not self.terminal_flage:
+            data = self.serial.readline()
+            line = str(data)
+            list_data = re.findall("\d+\.\d+", line)
+            print(list_data)
+            if len(list_data) == 2:
+                self.imu_human = list_data[0]
+                self.imu_robot = list_data[1]
+
+
 if __name__ == '__main__':
-    port_name = detect_serials(description="Arduino Mega 2560 (COM15)")
-    baud_rate = 115200
-    print(port_name,baud_rate)
-    serial = serial.Serial(port_name, baud_rate, timeout=None)
-    while True:
-        data = serial.readline()
-        print(bytes.decode(data))
+    ar = ArduinoRead()
+    ar.reading_data_from_arduino()
