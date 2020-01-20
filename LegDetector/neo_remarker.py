@@ -19,6 +19,8 @@ from people_msgs.msg import PositionMeasurementArray
 # from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Pose2D
+import math
+import numpy as np
 
 
 class ExtractLegDetector(object):
@@ -30,6 +32,7 @@ class ExtractLegDetector(object):
         self.pub = rospy.Publisher('neo_marker', Marker, queue_size=10)
         self.robot_x = 0
         self.robot_y = 0
+        self.theta = 0.0
 
     def leg_callback(self, data):
         # rospy.loginfo(rospy.get_caller_id() + "\nI heard %s", data.people[0].object_id)
@@ -49,15 +52,23 @@ class ExtractLegDetector(object):
     def pose2D(self, data):
         self.robot_x = data.x
         self.robot_y = data.y
+        self.theta = data.theta
         pass
 
     def listener_leg_tracker_measurements(self):
         rospy.Subscriber("/leg_tracker_measurements", PositionMeasurementArray, self.leg_callback)
 
     def marker_callback(self, data):
+        original_x = data.pose.position.x - self.robot_x
+        original_y = data.pose.position.y - self.robot_y
+        theta = self.theta
+
+        trans = np.array([[math.cos(theta), math.sin(theta)],
+                          [-math.sin(theta), math.cos(theta)]])
+        result = np.dot(trans, np.array([[original_x], [original_y]]))
+
         # this position is base line
-        if -0.2 < (data.pose.position.x - self.robot_x) < 0.46 and -0.18 < (
-                data.pose.position.y - self.robot_y) < 0.18:
+        if -0.2 < result[0] < 0.46 and -0.18 < (result[1]) < 0.18:
             try:
                 if data.text != "" and -0.6 < float(data.text) < 0.6:
                     rospy.loginfo("Point: " + str(data.pose.position.x) + " " + str(data.pose.position.y) + " " + str(

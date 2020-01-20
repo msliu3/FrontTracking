@@ -28,7 +28,7 @@ from threading import Thread
 from sklearn.cluster import KMeans
 import numpy as np
 import time
-
+import math
 
 def singleton(cls, *args, **kw):
     instances = {}
@@ -52,6 +52,7 @@ class LegInformation(Thread):
         self.height = 0.0
         self.robot_x = 0.0
         self.robot_y = 0.0
+        self.theta = 0.0
 
         self.prev_data = []
         self.prev_data_y = []
@@ -74,8 +75,16 @@ class LegInformation(Thread):
         obtain leg information
         """
         # print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
-        temp_x = data.pose.position.x - self.robot_x
-        temp_y = data.pose.position.y - self.robot_y
+
+        original_x = data.pose.position.x - self.robot_x
+        original_y = data.pose.position.y - self.robot_y
+        theta = self.theta
+
+        trans = np.array([[math.cos(theta), math.sin(theta)],
+                          [-math.sin(theta), math.cos(theta)]])
+        result = np.dot(trans, np.array([[original_x], [original_y]]))
+        temp_x = result[0]
+        temp_y = result[1]
 
         self.kmeans_detect_left_and_right(temp_x, temp_y)
 
@@ -88,6 +97,7 @@ class LegInformation(Thread):
     def pose2D_callback(self, data):
         self.robot_x = data.x
         self.robot_y = data.y
+        self.theta = data.theta
         pass
 
     def kmeans_detect_left_and_right(self, temp_x, temp_y):
