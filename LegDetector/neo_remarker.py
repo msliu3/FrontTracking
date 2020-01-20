@@ -73,7 +73,7 @@ class ExtractLegDetector(object):
                 if data.text != "" and -0.6 < float(data.text) < 0.6:
                     rospy.loginfo("Point: " + str(data.pose.position.x) + " " + str(data.pose.position.y) + " " + str(
                         data.pose.position.z))
-                    rospy.loginfo("reliability: " + data.text)
+                    # rospy.loginfo("reliability: " + data.text)
                     self.pub.publish(data)
             except Exception as e:
                 raise

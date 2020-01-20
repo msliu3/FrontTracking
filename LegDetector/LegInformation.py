@@ -122,20 +122,20 @@ class LegInformation(Thread):
             if result[-1] == 0:
                 self.left_leg_x = temp_x
                 self.left_leg_y = temp_y
-                print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
+                # print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
             else:
                 self.right_leg_x = temp_x
                 self.right_leg_y = temp_y
-                print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
+                # print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
         else:
             if result[-1] == 1:
                 self.left_leg_x = temp_x
                 self.left_leg_y = temp_y
-                print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
+                # print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
             else:
                 self.right_leg_x = temp_x
                 self.right_leg_y = temp_y
-                print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
+                # print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
             pass
         # print(result)
 

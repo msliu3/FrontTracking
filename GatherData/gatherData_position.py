@@ -78,10 +78,12 @@ if __name__ == '__main__':
     with open(data_path, 'w') as file:
         while True:
             time.sleep(0.25)
-            print("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f" % (time.time(),
+            print(cd.odo.getROS_XYTHETA()[2])
+            print("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f" % (time.time(),
                                                           cd.odo.getROS_XYTHETA()[0],
                                                           cd.odo.getROS_XYTHETA()[1],
-                                                          cd.odo.getROS_XTTHETA()[2],
+                                                            cd.odo.THETA,
+                                                          # cd.odo.getROS_XTTHETA()[2],
                                                           cd.odo.get_dxdydtheta()[0],
                                                           cd.odo.get_dxdydtheta()[1],
                                                           leg.left_leg_x,
@@ -89,10 +91,11 @@ if __name__ == '__main__':
                                                           leg.right_leg_x,
                                                           leg.right_leg_y
                                                           ))
-            file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (time.time(),
+            file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (time.time(),
                                                                  cd.odo.getROS_XYTHETA()[0],
                                                                  cd.odo.getROS_XYTHETA()[1],
-                                                                 cd.odo.getROS_XTTHETA()[2],
+                                                                 cd.odo.THETA,
+                                                                 # cd.odo.getROS_XTTHETA()[2],
                                                                  cd.odo.get_dxdydtheta()[0],
                                                                  cd.odo.get_dxdydtheta()[1],
                                                                  leg.left_leg_x,

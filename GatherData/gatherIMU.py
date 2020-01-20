@@ -56,7 +56,7 @@ def detect_serials(description, vid=0x10c4, pid=0xea60):
 
 class ArduinoRead(object):
     def __init__(self):
-        port_name = detect_serials(description="Arduino Mega 2560 (COM15)")
+        port_name = detect_serials(description="ttyACM") #CP2102 USB to UART Bridge Controller Arduino Mega 2560 (COM15)
         baud_rate = 115200
         print(port_name, baud_rate)
         self.serial = serial.Serial(port_name, baud_rate, timeout=None)

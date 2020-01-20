@@ -46,6 +46,8 @@ if __name__ == '__main__':
     for item in data:
         a_X.append(item[1])
         a_Y.append(item[2])
+        # print("%f\n"%(item[3]))
+        # print("%f\t%f\t%f\t%f\n" % (item[5],item[6],item[7],item[8]))
         trans_matrix = [[math.cos(item[3]), math.sin(item[3])],
                         [math.sin(-item[3]), math.cos(item[3])]]
         trans_matrix_inv = np.linalg.inv(trans_matrix)
@@ -54,7 +56,7 @@ if __name__ == '__main__':
         new_item[1][0] = item[6]
         new_item[0][1] = item[7]
         new_item[1][1] = item[8]
-        new_xy_item = trans_matrix_inv * new_item
+        new_xy_item = np.dot(trans_matrix_inv, new_item)
         l_X.append(item[1]+new_xy_item[0][0])
         l_Y.append(item[2]+new_xy_item[1][0])
         r_X.append(item[1]+new_xy_item[0][1])
