@@ -93,10 +93,10 @@ class LegInformation(Thread):
     def kmeans_detect_left_and_right(self, temp_x, temp_y):
         foot = np.array([temp_x, temp_y])
         # print(foot)
-        self.prev_data.append(foot)
+        self.prev_data.append(temp_y)
         if len(self.prev_data) > self.prev_data_length:
             self.prev_data.pop(0)
-        temp_np = np.array(self.prev_data)
+        temp_np = np.array(self.prev_data).reshape(-1, 1)
         if len(self.prev_data) == 1:
             return
         # print(temp_np)
@@ -105,27 +105,27 @@ class LegInformation(Thread):
         sum_flag1 = 0
         for i in range(len(result)):
             if result[i] == 0:
-                sum_flag0 += temp_np[i][1]
+                sum_flag0 += temp_np[i]
             else:
-                sum_flag1 += temp_np[i][1]
+                sum_flag1 += temp_np[i]
         if sum_flag0 > sum_flag1:
             if result[-1] == 0:
                 self.left_leg_x = temp_x
                 self.left_leg_y = temp_y
-                # print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
+                print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
             else:
                 self.right_leg_x = temp_x
                 self.right_leg_y = temp_y
-                # print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
+                print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
         else:
             if result[-1] == 1:
                 self.left_leg_x = temp_x
                 self.left_leg_y = temp_y
-                # print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
+                print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
             else:
                 self.right_leg_x = temp_x
                 self.right_leg_y = temp_y
-                # print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
+                print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
             pass
         # print(result)
 
