@@ -23,6 +23,7 @@ import threading
 
 import FootDetector.DemonstrationProcess as DP
 import LegDetector.LegInformation as LegLidar
+import GatherData.gatherIMU as imu
 # import numpy as np
 
 import threading
@@ -59,16 +60,19 @@ def loop2(matcher, queue, event):
 if __name__ == '__main__':
     pd = DP.DemonProcess()
     cd = CD.ControlDriver()
+    IMU = imu.ArduinoRead()
     event = threading.Event()
     # queue = multiprocessing.Queue()
-    # thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(queue,))
-    # thread_ir.start()
+    thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(queue,))
+    thread_ir.start()
     thread_control_driver = threading.Thread(target=cd.control_part, args=())
     thread_control_driver.start()
 
     leg = LegLidar.LegInformation()
     thread_start = threading.Thread(target=leg.loop, args=())
     thread_start.start()
+    thread_imu = threading.Thread(target=IMU.reading_data_from_arduino,args=())
+    thread_imu.start()
     event.clear()
     p1 = threading.Thread(target=loop, args=(event,))
     p1.start()
@@ -79,7 +83,7 @@ if __name__ == '__main__':
         while True:
             time.sleep(0.25)
             print(cd.odo.getROS_XYTHETA()[2])
-            print("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f" % (time.time(),
+            print("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f" % (time.time(),
                                                           cd.odo.getROS_XYTHETA()[0],
                                                           cd.odo.getROS_XYTHETA()[1],
                                                             cd.odo.THETA,
@@ -89,9 +93,10 @@ if __name__ == '__main__':
                                                           leg.left_leg_x,
                                                           leg.left_leg_y,
                                                           leg.right_leg_x,
-                                                          leg.right_leg_y
+                                                          leg.right_leg_y,
+                                                            IMU.imu_human
                                                           ))
-            file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (time.time(),
+            file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (time.time(),
                                                                  cd.odo.getROS_XYTHETA()[0],
                                                                  cd.odo.getROS_XYTHETA()[1],
                                                                  cd.odo.THETA,
@@ -101,7 +106,8 @@ if __name__ == '__main__':
                                                                  leg.left_leg_x,
                                                                  leg.left_leg_y,
                                                                  leg.right_leg_x,
-                                                                 leg.right_leg_y
+                                                                 leg.right_leg_y,
+                                                                 IMU.imu_human
                                                                  ))
             if event.is_set():
                 break

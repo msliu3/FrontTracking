@@ -21,6 +21,11 @@ from FootDetector import ProcessFunc as pf, FootInformation as foot
 from FootDetector.IRCamera import IRCamera
 import time
 
+resource = os.path.abspath(
+    os.path.dirname(os.path.abspath(__file__)) + os.path.sep + ".." + os.path.sep + "resource")
+resource_video = resource + os.path.sep + "output.avi"
+resource_img = resource + os.path.sep + "output_npdata"
+
 
 def singleton(cls, *args, **kw):
     instances = {}
@@ -36,10 +41,6 @@ def singleton(cls, *args, **kw):
 @singleton
 class DemonProcess(object):
     head_size = 4
-    resource = os.path.abspath(
-        os.path.dirname(os.path.abspath(__file__)) + os.path.sep + ".." + os.path.sep + "resource")
-    resource_video = resource + os.path.sep + "output.avi"
-    resource_img = resource + os.path.sep + "output_npdata"
     print(resource_video)
     print(resource_img)
 
@@ -136,7 +137,7 @@ class DemonProcess(object):
         # list的顺序并不是图像顺序，需要reshape进行变形
         np_data = np.array(temp_data).reshape(24, 32)
         # np_data = np.array(temperature).reshape(24, 32)
-        temperature = np.array(temperature, np.float32).reshape(24, 32)
+        # temperature = np.array(temperature, np.float32).reshape(24, 32)
 
         # zero = np.zeros((24,32))我希望是红蓝配色
         rgb_data = np.array([np_data, np_data, np_data], np.uint8).reshape(3, -1)
@@ -337,6 +338,9 @@ class DemonProcess(object):
         data = []
         filter_data = []
         rest_num = 5
+        ir_data_path = resource + os.path.sep + "ir_data.txt"
+        np_data_path = resource + os.path.sep + "np_data_txt"
+        file_ir = open(ir_data_path, "w")
         while True:
             s = self.serial.read(1).hex()
             if s != "":
@@ -358,9 +362,13 @@ class DemonProcess(object):
                     # ir_np = pf.draw_hist(ir_np)
                     if foot_flag:
                         # filter is effective
+                        time_index = time.time()
+                        temp.insert(0, time_index)
+                        file_ir.write(str(temp) + "\n")
+                        # np.savetxt(np_data_path+os.path.sep+time_index+".txt",ir_np)
                         ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=16)
                         # print(self.output_image + os.path.sep + time.strftime("%H:%M:%S", time.localtime()) + ".jpg")
-                        cv.imwrite("../resource/output_npdata/"+ time.strftime("%H-%M-%S", time.localtime()) + ".jpg",ir_np)
+                        cv.imwrite("../resource/output_npdata/" + time_index + ".jpg", ir_np)
                         # pf.show_temperature(temp)
                         # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.8)
                         ir_np, contours = self.binary_image(np.array(ir_np))
@@ -368,7 +376,7 @@ class DemonProcess(object):
                             queue.put(self.foot, block=False)
                             self.foot.clear_current_info()
                         self.find_foot_ankle(ir_np, contours)
-                        print(time.strftime("%H:%M:%S", time.localtime()), self.foot.left_line, self.foot.right_line)
+                        # print(time.strftime("%H:%M:%S", time.localtime()), self.foot.left_line, self.foot.right_line)
                         if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                             break
 
@@ -378,6 +386,8 @@ class DemonProcess(object):
                     #     break
                     data.pop(rest_num - 1)
                     data.pop(0)
+        # file_np.close()
+        file_ir.close()
 
 
 if __name__ == '__main__':
