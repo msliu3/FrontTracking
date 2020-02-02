@@ -27,7 +27,7 @@ import GatherData.gatherIMU as imu
 # import numpy as np
 
 import threading
-import DigitalDriver.ControlDriver_zhuzhi as CD
+import DigitalDriver.ControlandOdometryDriver as CD
 import multiprocessing
 
 

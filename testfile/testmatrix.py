@@ -40,10 +40,10 @@ print(test1)
 print("-------------------------------")
 # original_x = data.pose.position.x - self.robot_x
 # original_y = data.pose.position.y - self.robot_y
-original_x = -1
-original_y = 1
-theta = math.radians(90)
-print(theta)
+original_x = 0.5
+original_y = 0
+theta = math.radians(-90)
+print(theta,math.radians(-90))
 
 trans = np.array([[math.cos(theta), math.sin(theta)],
                   [-math.sin(theta), math.cos(theta)]])
