@@ -113,12 +113,14 @@ class LegInformation(Thread):
         original_y = data.pose.position.y - self.robot_y
         theta = self.theta
 
+        # 坐标系变换
         trans = np.array([[math.cos(theta), math.sin(theta)],
                           [-math.sin(theta), math.cos(theta)]])
         result = np.dot(trans, np.array([[original_x], [original_y]]))
         temp_x = result[0]
         temp_y = result[1]
 
+        # k-means 判断左右腿
         self.kmeans_detect_left_and_right(temp_x, temp_y)
 
         pass

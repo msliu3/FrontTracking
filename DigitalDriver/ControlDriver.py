@@ -27,6 +27,8 @@ sys.path.append(BASE_DIR)
 
 import time
 from threading import Thread
+
+# 在这根据运行环境是Win还是Linux判断需要用的文件是 DigitalServoDriver_linux和DigitalServoDriver
 import DigitalDriver.DigitalServoDriver_linux as DsD
 import serial
 import math
@@ -56,6 +58,7 @@ class ControlDriver(Thread):
         self.ser_l = serial.Serial(driver.left, baud_rate, timeout=None)
         self.radius_wheel = radius_wheel
         self.flag_end = flag_end
+
         self.radius = radius
         self.speed = 0
         self.omega = 0

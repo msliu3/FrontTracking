@@ -345,7 +345,7 @@ def loop_record(control):
         # find mic usb device
         if device_name.find(RECORD_DEVICE_NAME) != -1:
             device_index = index
-            # break
+            break
 
     if device_index != -1:
         print("find the device")
@@ -373,11 +373,14 @@ def loop_record(control):
         while True:
             print("start monitoring ... ")
             p = pyaudio.PyAudio()
+            print(device_index)
             stream = p.open(format=p.get_format_from_width(RECORD_WIDTH),
                             channels=CHANNELS,
                             rate=RATE,
                             input=True,
                             input_device_index=device_index)
+
+            print("===")
 
             # 16 data
             frames = []
@@ -415,7 +418,7 @@ def loop_record(control):
 
         print("producing action ...")
 
-        gcc = gccGenerator.cal_gcc_online("../resource/wav", saved_count)
+        gcc = gccGenerator.cal_gcc_online("./", saved_count)
         state = np.array(gcc)[np.newaxis, :]
 
         # todo, new state for last time, reward, learn
@@ -424,17 +427,22 @@ def loop_record(control):
         # todo, define invalids, based on constructed map
         action, _ = actor.output_action(state, [])
 
+        direction = (action + 6) % 7 * 45
         # bias is 45 degree, ok
-        print("Estimated direction is :" + str((action + 6) % 7 * 45))
+        print("Estimated direction is :" + str(direction))
 
         # todo, reward
 
         print("apply movement ...")
-
+        rad = math.radians(direction)
         # todo, give speed , radius, omega
         control.speed = 0
         control.radius = 0
-        control.omega = 0.1
+
+        omega = rad/ACTION_SECONDS
+        control.omega = omega
+
+
 
         time.sleep(ACTION_SECONDS)
         print("movement done.")

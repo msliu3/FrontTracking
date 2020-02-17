@@ -35,7 +35,7 @@ for index in range(0, p.get_device_count()):
     # find mic usb device
     if device_name.find(RECORD_DEVICE_NAME) != -1:
         device_index = index
-        # break
+        break
 
 if device_index != -1:
     print("find the device")
@@ -44,8 +44,9 @@ if device_index != -1:
 else:
     print("don't find the device")
 
-# stream = p.open(format=p.get_format_from_width(RECORD_WIDTH),
-#                 channels=CHANNELS,
-#                 rate=RATE,
-#                 input=True,
-#                 input_device_index=device_index)
+stream = p.open(format=p.get_format_from_width(RECORD_WIDTH),
+                channels=CHANNELS,
+                rate=RATE,
+                input=True,
+                input_device_index=device_index)
+print("hhhhh")

@@ -23,7 +23,7 @@ import threading
 
 import FootDetector.DemonstrationProcess as DP
 import LegDetector.LegInformation as LegLidar
-import GatherData.gatherIMU as imu
+import GatherData_visualization.gatherIMU as imu
 # import numpy as np
 
 import threading
