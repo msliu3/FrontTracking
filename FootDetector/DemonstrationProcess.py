@@ -389,6 +389,38 @@ class DemonProcess(object):
         # file_np.close()
         file_ir.close()
 
+    def start_Demon_for_DL(self, queue=None):
+        head = []
+        data = []
+        filter_data = []
+        rest_num = 5
+        while True:
+            s = self.serial.read(1).hex()
+            if s != "":
+                s = int(s, 16)
+            head.append(s)
+
+            if len(head) == self.head_size:
+                if self.check_head_data(head):
+                    temp = self.serial.read(1540)
+                    data.append(temp.hex())
+                    head.clear()
+                else:
+                    head.pop(0)
+
+                # 将读到的数据进行展示
+                if len(data) == rest_num:
+                    temp, ir_np, foot_flag = self.demonstrate_data(data[rest_num - 1], filter_data,
+                                                                   filter_num=2)  # ,zoom_filter=Image.HAMMING
+                    if foot_flag:
+                        # filter is effective
+                        if queue is not None:
+                            queue.put(temp, block=False)
+                        if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
+                            break
+                    data.pop(rest_num - 1)
+                    data.pop(0)
+
 
 if __name__ == '__main__':
     pd = DemonProcess()
