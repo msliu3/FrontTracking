@@ -33,7 +33,6 @@ class ControlDriver(Thread):
 
     def __init__(self, radius_wheel=85.00, record_mode=False, radius=0, left_right=1):
         """
-
         :param radius_wheel:
         :param record_mode:
         :param radius:
@@ -208,8 +207,7 @@ class ControlDriver(Thread):
                 self.position = self.odo.updatePose(-self.odo.Odo_l, self.odo.Odo_r)
                 # print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm; THETA=', self.position[2] / math.pi * 180, '°;')
 
-                if math.sqrt(
-                        (self.position[0] - self.plot_x[-1]) ** 2 + (self.position[1] - self.plot_y[-1]) ** 2) > 0.1:
+                if math.sqrt((self.position[0] - self.plot_x[-1]) ** 2 + (self.position[1] - self.plot_y[-1]) ** 2) > 0.1:
                     self.plot_x.append(self.position[0])
                     self.plot_y.append(self.position[1])
 
@@ -231,10 +229,7 @@ class ControlDriver(Thread):
             self.ser_r.reset_input_buffer()
         pass
 
-    def stopMotor(self):
-        # 写入停止电机命令[0x00, 0x00, 0x00, 0x00]后，驱动器读到的第一帧数据可能会出现如下错误，后续数据都正常
-        # {'ONorOFF': True, 'Malfunction': '', 'InputVoltage': 128, 'OutputCurrent': 329.93, 'RPM': 7607.637333333333, 'GivenPosition': -270211866, 'FeedbackPosition': -421009432}
-        # 因此此处需要抛弃第一帧数据
+    def stopMotor(self):    #关闭电机，同时关闭刹车
         end = [0x00, 0x00, 0x00, 0x00]
         self.ser_l.write(bytes(end))
         self.ser_l.read(2)

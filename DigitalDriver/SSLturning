@@ -1,0 +1,36 @@
+from DigitalDriver import ControlandOdometryDriver
+import math
+
+def SSLturning(cd, angle):
+    # cd: an instance of class ControlandOdometryDriver,  angle: angle to turn as in degree
+
+    rad = (angle/45) * math.pi / 4  #degree -> rad
+    currentTHETA = cd.position[2]   #read current THETA∈(-π，π]
+    expectedTHETA = currentTHETA + rad
+
+    if expectedTHETA > math.pi:
+        expectedTHETA -= 2 * math.pi
+    elif expectedTHETA <= -math.pi:
+        expectedTHETA += 2 * math.pi
+
+    cd.stop()
+    if rad>=0 :
+        cd.omega = math.pi / 8
+    else:
+        cd.omega = -math.pi / 8
+    cd.radius = 0
+    cd.speed = 0
+    cd.control_part()   #start turning
+    if cd.position[2]*expectedTHETA>=0 and rad>=0:
+        while 1:
+            if cd.position[2]-expectedTHETA>=0:
+                break
+    elif cd.position[2]*expectedTHETA>=0 and rad<0:
+        while 1:
+            if expectedTHETA-cd.position[2]>=0:
+                break
+    else:
+        pass
+    #stop moving
+    cd.omega = 0
+    cd.control_part()
