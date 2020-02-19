@@ -78,7 +78,23 @@ class DeepLearningDetectCase(object):
         return classes,logits
 
     def obtain_input(self, ir_data_sample, leg_sample):
-        input_data = np.r_[ir_data_sample, leg_sample]
+        np_size_32 = np.ones(32 * 24).reshape([ 32 * 24,1])
+        max_colum = ir_data_sample.max(axis=1).reshape([ir_data_sample.shape[0], 1])
+        max_value = max_colum.max()
+        min_colum = ir_data_sample.min(axis=1).reshape([ir_data_sample.shape[0], 1])
+        min_value = min_colum.min()
+        min_np = np_size_32 * min_value
+
+        max_minus_min = max_value - min_value
+        normal_ir = (ir_data_sample - min_np) / max_minus_min  # normal_ir shape[list_num,32*24]
+
+        # legs_position normalization
+        max_leg = leg_sample.max(axis=0)
+        min_leg = leg_sample.min(axis=0)
+        max_minus_min = max_leg - min_leg
+        normal_leg = (leg_sample - min_leg) / max_minus_min
+
+        input_data = np.r_[normal_ir, normal_leg]
         return {self.inputs: input_data.reshape([1, 24 * 32 + 4, self.sample_num])}
 
     def print_predict_result(self, ir_data_sample, leg_sample):

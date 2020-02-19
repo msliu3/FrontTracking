@@ -58,18 +58,19 @@ def loop2(deep, queue, leg):
             if not queue.empty():
                 # print("into queue")
                 temps = queue.get(block=False)
-                ir_data.append(np.array(temps).reshape([32 * 24, 1]))
+                ir_data.append(np.array(temps).reshape([1, 24*32]))
                 # print(leg.left_leg_x, leg.left_leg_y, leg.right_leg_x, leg.right_leg_y)
-                lidar_data.append([leg.left_leg_x, leg.left_leg_y, leg.right_leg_x, leg.right_leg_y])
+                leg_temp = np.array([leg.left_leg_x, leg.left_leg_y, leg.right_leg_x, leg.right_leg_y]).reshape([1,4])
+                lidar_data.append(leg_temp)
             if len(ir_data)==deep.sample_num:
                 break
 
         ir_np = np.array(ir_data).reshape([32 * 24, deep.sample_num])
         leg_np = np.array(lidar_data).reshape([4, deep.sample_num])
         sum += 1
-        print(leg_np)
+        print(ir_np.shape,leg_np.shape)
         # print("times: ",sum)
-        # deep.print_predict_result(ir_np, leg_np)
+        deep.print_predict_result(ir_np, leg_np)
 
 
 if __name__ == '__main__':
