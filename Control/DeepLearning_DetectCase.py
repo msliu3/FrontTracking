@@ -44,7 +44,7 @@ class DeepLearningDetectCase(object):
         self.legs_position = np.ones(4 * self.sample_num).reshape([4, self.sample_num])
 
         # tensorflow的数据入口（占位符）
-        self.inputs = tf.placeholder(tf.float32, shape=[None, 24 * 32 + 4, self.sample_size], name="inputs")
+        self.inputs = tf.placeholder(tf.float32, shape=[None, 24 * 32 + 4, self.sample_num], name="inputs")
         self.labels = tf.placeholder(tf.int32, shape=[None], name="labels")
 
         height = 24
@@ -60,9 +60,10 @@ class DeepLearningDetectCase(object):
         self.fc3_biases = tf.get_variable('f3_biases', shape=[self.class_num], dtype=tf.float32)
 
         # 构建模型并且把结果保存在predict_result中
-        self.predict_result = self.build_mode()
+        self.predict_result,self.logits = self.build_mode()
         self.sess = tf.Session()
         saver = tf.train.Saver()
+        print(self.model_path)
         saver.restore(self.sess, self.model_path)
         pass
 
@@ -74,19 +75,23 @@ class DeepLearningDetectCase(object):
         net = tf.add(tf.matmul(net, self.fc3_weights), self.fc3_biases)
         logits = tf.nn.softmax(net)
         classes = tf.cast(tf.argmax(logits, axis=1), dtype=tf.int32)
-        return classes
+        return classes,logits
 
     def obtain_input(self, ir_data_sample, leg_sample):
-        input_data = np.c_[ir_data_sample, leg_sample]
+        input_data = np.r_[ir_data_sample, leg_sample]
         return {self.inputs: input_data.reshape([1, 24 * 32 + 4, self.sample_num])}
 
     def print_predict_result(self, ir_data_sample, leg_sample):
-        result_ = self.sess.run(self.predict_result, feed_dict=self.obtain_input(ir_data_sample, leg_sample))
+        result_ ,logits_= self.sess.run([self.predict_result,self.logits], feed_dict=self.obtain_input(ir_data_sample, leg_sample))
         if result_ == 0:
             print("-----------------still--------------")
+            print(logits_)
         elif result_ == 1:
             print("-----------------forward--------------")
+            print(logits_)
         elif result_ == 2:
             print("-----------------right--------------")
+            print(logits_)
         elif result_ == 3:
             print("-----------------left--------------")
+            print(logits_)

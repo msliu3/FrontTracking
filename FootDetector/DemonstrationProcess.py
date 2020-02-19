@@ -318,7 +318,7 @@ class DemonProcess(object):
         # 在这里考虑一下如何，可以既填数又填string
         if without == "Demo":
             cv.namedWindow("The IR data", 0)
-            cv.resizeWindow("The IR data", 32 * 30, 24 * 30)
+            cv.resizeWindow("The IR data", 32 * 20, 24 * 20)
             cv.imshow("The IR data", np_ir)
 
         self.out.write(np_ir)
@@ -368,7 +368,7 @@ class DemonProcess(object):
                         # np.savetxt(np_data_path+os.path.sep+time_index+".txt",ir_np)
                         ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=16)
                         # print(self.output_image + os.path.sep + time.strftime("%H:%M:%S", time.localtime()) + ".jpg")
-                        cv.imwrite("../resource/output_npdata/" + time_index + ".jpg", ir_np)
+                        # cv.imwrite("../resource/output_npdata/" + time_index + ".jpg", ir_np)
                         # pf.show_temperature(temp)
                         # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.8)
                         ir_np, contours = self.binary_image(np.array(ir_np))
@@ -412,16 +412,15 @@ class DemonProcess(object):
                 if len(data) == rest_num:
                     temp, ir_np, foot_flag = self.demonstrate_data(data[rest_num - 1], filter_data,
                                                                    filter_num=2)  # ,zoom_filter=Image.HAMMING
-                    if foot_flag:
-                        # filter is effective
-                        if queue is not None:
-                            queue.put(temp, block=False)
-                        if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
-                            break
+                    ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=16)
+                    if queue is not None:
+                        queue.put(temp, block=False)
+                    if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
+                        break
                     data.pop(rest_num - 1)
                     data.pop(0)
 
 
 if __name__ == '__main__':
     pd = DemonProcess()
-    pd.start_Demon()
+    pd.start_Demon_for_DL()
