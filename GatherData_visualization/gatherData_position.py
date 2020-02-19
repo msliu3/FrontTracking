@@ -63,7 +63,7 @@ if __name__ == '__main__':
     IMU = imu.ArduinoRead()
     event = threading.Event()
     # queue = multiprocessing.Queue()
-    thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(queue,))
+    thread_ir = multiprocessing.Process(target=pd.start_Demon, args=())
     thread_ir.start()
     thread_control_driver = threading.Thread(target=cd.control_part, args=())
     thread_control_driver.start()
@@ -94,7 +94,8 @@ if __name__ == '__main__':
                                                           leg.left_leg_y,
                                                           leg.right_leg_x,
                                                           leg.right_leg_y,
-                                                            IMU.imu_human
+                                                                  0
+                                                            # IMU.imu_human
                                                           ))
             file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (time.time(),
                                                                  cd.odo.getROS_XYTHETA()[0],
@@ -107,8 +108,23 @@ if __name__ == '__main__':
                                                                  leg.left_leg_y,
                                                                  leg.right_leg_x,
                                                                  leg.right_leg_y,
-                                                                 IMU.imu_human
+                                                                         0
+                                                                 # IMU.imu_human
                                                                  ))
+            # file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (time.time(),
+            #                                                              cd.odo.getROS_XYTHETA()[0],
+            #                                                              cd.odo.getROS_XYTHETA()[1],
+            #                                                              cd.odo.THETA,
+            #                                                              # cd.odo.getROS_XTTHETA()[2],
+            #                                                              cd.odo.get_dxdydtheta()[0],
+            #                                                              cd.odo.get_dxdydtheta()[1],
+            #                                                              leg.left_leg_x,
+            #                                                              leg.left_leg_y,
+            #                                                              leg.right_leg_x,
+            #                                                              leg.right_leg_y,
+            #
+            #                                                              ))
+            # file.write("sasasasasasa \n")
             if event.is_set():
                 break
         file.close()
