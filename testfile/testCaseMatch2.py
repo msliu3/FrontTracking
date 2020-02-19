@@ -21,7 +21,7 @@ father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
 sys.path.append(father_path)
 import threading
 
-import Control.MatchCase as MC
+import Control.MatchCase2 as MC
 import FootDetector.DemonstrationProcess as DP
 # import numpy as np
 
@@ -49,7 +49,7 @@ def loop2(matcher, queue, event):
         time.sleep(0.25)
         # print(queue.qsize())
         if not queue.empty():
-            print("assign")
+            # print("assign")
             matcher.foot = queue.get(block=False)
         matcher.detect_front_and_back_foot()
         x, theta = matcher.detect_case()
@@ -63,16 +63,16 @@ def loop2(matcher, queue, event):
 
 if __name__ == '__main__':
     pd = DP.DemonProcess()
-    cd = CD.ControlDriver()
+    # cd = CD.ControlDriver()
     mc = MC.MatchCase(foot=pd.foot)
     pc = PC.PositionControl()
     event = threading.Event()
     queue = multiprocessing.Queue()
     thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(queue,))
     thread_ir.start()
-    thread_control_driver = threading.Thread(target=cd.control_part, args=())
-    thread_control_driver.start()
-    p1 = threading.Thread(target=loop, args=(cd, mc, pc, event))
-    p1.start()
+    # thread_control_driver = threading.Thread(target=cd.control_part, args=())
+    # thread_control_driver.start()
+    # p1 = threading.Thread(target=loop, args=(cd, mc, pc, event))
+    # p1.start()
     p2 = threading.Thread(target=loop2, args=(mc, queue, event))
     p2.start()

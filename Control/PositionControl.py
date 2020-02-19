@@ -106,7 +106,7 @@ class PositionControl(object):
         pass
 
     def calculate_degree(self, l):
-        sin = math.sin(self.expect_x / l * 100)
+        sin = math.sin(self.expect_x / (l-self.robot_r/4) * 100)
         rad = math.asin(sin)
         return rad, math.degrees(rad)
 
