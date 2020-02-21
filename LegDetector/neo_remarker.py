@@ -68,7 +68,7 @@ class ExtractLegDetector(object):
         result = np.dot(trans, np.array([[original_x], [original_y]]))
 
         # this position is base line
-        if -0.4 < result[0] < 0.46 and -0.18 < (result[1]) < 0.18:
+        if -0.4 < result[0] < 0.4 and -0.21 < (result[1]) < 0.21:
             try:
                 if data.text != "" and -0.6 < float(data.text) < 0.6:
                     # rospy.loginfo("Point: " + str(data.pose.position.x) + " " + str(data.pose.position.y) + " " + str(

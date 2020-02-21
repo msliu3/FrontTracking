@@ -46,7 +46,7 @@ def loop(control, matcher, pc, e):
 
 def loop2(matcher, queue, event):
     while True:
-        time.sleep(0.25)
+        time.sleep(0.3)
         # print(queue.qsize())
         if not queue.empty():
             # print("assign")
@@ -72,6 +72,7 @@ if __name__ == '__main__':
     thread_ir.start()
     thread_control_driver = threading.Thread(target=cd.control_part, args=())
     thread_control_driver.start()
+
     p1 = threading.Thread(target=loop, args=(cd, mc, pc, event))
     p1.start()
     p2 = threading.Thread(target=loop2, args=(mc, queue, event))

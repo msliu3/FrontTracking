@@ -369,15 +369,19 @@ class DemonProcess(object):
                         ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=16)
                         # print(self.output_image + os.path.sep + time.strftime("%H:%M:%S", time.localtime()) + ".jpg")
                         # cv.imwrite("../resource/output_npdata/" + time_index + ".jpg", ir_np)
-                        # pf.show_temperature(temp)
+                        # pf.show_temperature(temp)'[9
                         # ir_np = pf.image_processing_contrast_brightness(ir_np, 1.2, -0.8)
                         ir_np, contours = self.binary_image(np.array(ir_np))
                         if queue is not None:
                             queue.put(self.foot, block=False)
                             self.foot.clear_current_info()
                         self.find_foot_ankle(ir_np, contours)
-                        # print(time.strftime("%H:%M:%S", time.localtime()), self.foot.left_line, self.foot.right_line)
-                        if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
+
+                        # print("line_angle: ", self.foot.left_line, self.foot.right_line)
+                        # print("right_angle: ", self.foot.right_line, self.foot.right_rect)
+                        # print("left_angle: ", self.foot.left_line, self.foot.left_rect)
+
+                        if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='fr'ame-by-frame'
                             break
 
                     # ir_np, contours = dp.binary_image(np.array(ir_np))
@@ -423,4 +427,4 @@ class DemonProcess(object):
 
 if __name__ == '__main__':
     pd = DemonProcess()
-    pd.start_Demon_for_DL()
+    pd.start_Demon()

@@ -49,7 +49,7 @@ def loop2(deep, queue, leg):
     ir_data = []
     lidar_data = []
     while True:
-        time.sleep(1)
+        time.sleep(0.1)
         while len(ir_data) <= deep.sample_num:
 
             if len(ir_data) == deep.sample_num:
@@ -59,7 +59,7 @@ def loop2(deep, queue, leg):
                 # print("into queue")
                 temps = queue.get(block=False)
                 ir_data.append(np.array(temps).reshape([1, 24 * 32]))
-                print("leg:", leg.left_leg_x, leg.left_leg_y, leg.right_leg_x, leg.right_leg_y)
+                # print("leg:", leg.left_leg_x, leg.left_leg_y, leg.right_leg_x, leg.right_leg_y)
                 leg_temp = np.array([leg.left_leg_x, leg.left_leg_y, leg.right_leg_x, leg.right_leg_y]).reshape([1, 4])
                 lidar_data.append(leg_temp)
             if len(ir_data) == deep.sample_num:
@@ -68,9 +68,9 @@ def loop2(deep, queue, leg):
         ir_np = np.array(ir_data).reshape([32 * 24, deep.sample_num])
         leg_np = np.array(lidar_data).reshape([4, deep.sample_num])
         sum += 1
-        print(leg_np[0])
+        # print(leg_np[0])
         # print("times: ",sum)
-        # deep.print_predict_result(ir_np, leg_np)
+        deep.print_predict_result(ir_np, leg_np)
 
 
 if __name__ == '__main__':
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     leg = LegLidar.LegInformation()
     thread_start = threading.Thread(target=leg.loop, args=())
     thread_ir = multiprocessing.Process(target=pd.start_Demon_for_DL, args=(queue,))
-    deep = DL.DeepLearningDetectCase(model_name="DNN1.ckpt")
+    deep = DL.DeepLearningDetectCase(model_name="dnn8.ckpt")
     p2 = threading.Thread(target=loop2, args=(deep, queue, leg))
     thread_start.start()
 

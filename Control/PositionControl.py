@@ -74,30 +74,29 @@ class PositionControl(object):
     def design_path_forward_and_turning(self):
         """
         直行和行走转弯都可以处理
-        [0, 15]    (15, 30]    (30, 45]    (45, 90]
+        [0, 5]    (15, 30]    (30, 45]    (45, 90]
         -------------------------------------------
         正无穷      r ->2r        r           r/2
         :return:
         """
+        # 赋予速度定值
         if self.expect_theta > 0:
             self.omega = 0.2
         else:
             self.omega = -0.2
 
         abs_theta = abs(self.expect_theta)
-        if abs_theta <= 15:
+        if abs_theta <= 25:
             # 判定为直行
             self.omega = 0
             self.design_path_forward_and_back()
             return
-        elif 15 < abs_theta <= 30:
-            self.radius = self.robot_r * 2 - ((abs_theta - 15) / (30 - 15) * self.robot_r)
-            print()
-        elif 30 < abs_theta <= 45:
-            self.radius = self.robot_r
-        elif 45 < abs_theta <= 90:
+
+        elif 25 < abs_theta <= 55:
+            self.radius = self.robot_r * 2 - ((abs_theta - 15) / (55 - 15) * self.robot_r)
+        elif 85 < abs_theta <= 90:
             self.radius = self.robot_r / 2
-        print(self.expect_x,self.expect_theta)
+        print(self.expect_x, self.expect_theta)
         rad, degree = self.calculate_degree(self.radius)
         # print("rad: ", rad, "degree: ", degree)
         self.running_time = abs(rad / self.omega)
@@ -106,15 +105,20 @@ class PositionControl(object):
         pass
 
     def calculate_degree(self, l):
-        sin = math.sin(self.expect_x / (l-self.robot_r/4) * 100)
+        if self.omega > 0:
+            sin = math.sin(self.expect_x / (l - self.robot_r / 4) * 100)
+        else:
+            sin = math.sin(self.expect_x / (l - self.robot_r / 4) * 100)
         rad = math.asin(sin)
         return rad, math.degrees(rad)
 
     def design_path_forward_and_back(self):
+        # 赋予直行速度定值
         if self.expect_x < 0:
             self.speed = -0.2
         elif self.expect_x > 0:
             self.speed = 0.2
+
         else:
             self.clear_driver()
             return
@@ -134,7 +138,7 @@ class PositionControl(object):
     def action_forward_back(self, control_driver):
         self.action_over = False
         self.design_path_forward_and_back()
-        print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
+        # print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
         if self.speed != 0 or self.omega != 0:
             self.set_driver(control_driver)
             time.sleep(self.running_time)
@@ -145,7 +149,7 @@ class PositionControl(object):
     def action_rotation(self, control_driver):
         self.action_over = False
         self.design_path_rotate()
-        print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
+        # print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
         if self.speed != 0 or self.omega != 0:
             self.set_driver(control_driver)
             time.sleep(self.running_time)
@@ -156,7 +160,7 @@ class PositionControl(object):
     def action_forward_and_turning(self, control_driver):
         self.action_over = False
         self.design_path_forward_and_turning()
-        print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
+        # print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
         if self.speed != 0 or self.omega != 0:
             self.set_driver(control_driver)
             time.sleep(self.running_time)

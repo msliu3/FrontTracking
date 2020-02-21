@@ -10,7 +10,8 @@
 
 @Description
 ------------
-None
+2020-2-21
+这次修改主要是重新校订，IR image到脚的角度的定义域
 """
 import threading
 
@@ -103,6 +104,7 @@ class FootInformation(Thread):
         else:
             self.left_rect = -rect_left[2]
 
+        # 对矩形角度为90的重新定义
         if abs(rect_right[2]) == 90:
             if self.foot_size_right_w > self.foot_size_right_h:
                 self.right_rect = 0.0
@@ -110,8 +112,21 @@ class FootInformation(Thread):
                 self.right_rect = 90.0
         else:
             self.right_rect = 90 + rect_right[2]
+
+        if self.right_rect < 30:
+            self.right_rect = 90.0
+        if self.left_rect < 30:
+            self.left_rect = 90.0
+
+        # -------------------------------------------------------------------------
         self.left_line = -line_left
         self.right_line = line_right
+        if self.right_line < 0:
+            temp = 90 + self.right_line
+            self.right_line = 90 + temp
+        if self.left_line < 0:
+            temp = 90 + self.left_line
+            self.left_line = 90 + temp
 
         text = "left: " + str(round(self.left_line, 2)) + " right: " + str(round(self.right_line, 2))
         cv.putText(self.image, text, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv.LINE_AA)

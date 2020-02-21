@@ -71,11 +71,6 @@ class MatchCase(object):
         self.base_size = base_size
         self.base_cal_flag = False
 
-        self.average_l = []
-        self.average_r = []
-        self.average_size = 15
-        self.a_l = 0.0
-        self.a_r = 0.0
         pass
 
     def detect_case(self):
@@ -94,48 +89,35 @@ class MatchCase(object):
             front_x = self.leg.left_leg_x
         else:
             front_x = self.leg.right_leg_x
-        dis = (self.leg.left_leg_x + self.leg.right_leg_x) / 2
-        if self.not_distinguish:
-            if -0.15 < dis < 0.05:
+
+        if self.front != "":
+
+            # print(front_x)
+            if -0.15 < front_x < 0.05:
                 self.rotate = True
-                print("rotate")
-                self.base_foot()
-                self.foot.assign_data_to_draw()
-            elif dis < -0.15:
+                print("rotate_front")
+                # self.base_foot()
+            elif front_x < -0.15:
                 self.back = True
                 print("back")
-                self.go_back_or_forward(dis)
+                self.go_back_or_forward(front_x)
                 return self.expect_x, self.expect_theta
-            elif dis > 0.05:
-                print("forward")
-                self.forward = True
-                self.go_back_or_forward(dis)
-                return self.expect_x, self.expect_theta
-        else:
-            if self.front != "":
-                print(front_x)
-                if -0.15 < front_x < 0.05:
-                    self.rotate = True
-                    print("rotate_front")
-                    self.base_foot()
-                    self.foot.assign_data_to_draw()
-                elif front_x < -0.15:
-                    self.back = True
-                    print("back")
-                    self.go_back_or_forward(front_x)
-                    return self.expect_x, self.expect_theta
-                elif front_x > 0.05:
-                    print("turing and forward:",self.front)
+            elif front_x > 0.05:
+                if self.foot.left_line != 0:
+                    print("turing and forward:", self.front)
                     self.turning = True
                     self.go_turning_and_forward()
+                    print("---------------------------------------------")
+                    print(self.expect_theta)
+                    print("---------------------------------------------")
                     return self.expect_x, self.expect_theta
-
-
-            # print(self.average_l, self.average_r)
-            # self.draw_pic()
-            # print(self.leg.left_leg_x, self.leg.right_leg_x)
-
-            # print("No result:not_dis:",self.not_distinguish," front:",self.front)
+                else:
+                    self.forward = True
+                    self.go_back_or_forward(front_x)
+                    print("forward")
+        # 总是能分出前后脚的所以不需要判断两脚并一块的情况
+        # else:
+        # print("No result:not_dis:",self.not_distinguish," front:",self.front)
         return 0, 0
 
     def go_back_or_forward(self, dis):
@@ -153,12 +135,32 @@ class MatchCase(object):
 
     def go_turning_and_forward(self):
         # print(self.a_l, self.a_r)
+        # 判断一下这只脚的情况：前行左转右转
         if self.front == "left":
-            self.expect_theta = 90 - self.a_l
-            self.expect_x = self.leg.left_leg_x
+            if self.foot.left_line > 100:
+                self.expect_theta = -90.0
+                # print("turn right")
+            elif self.foot.left_rect == 90:
+                self.expect_theta = 0
+            else:
+                self.expect_theta = 90 - self.foot.left_line
+            if self.foot.right_line != 0:
+                self.expect_x = self.leg.left_leg_x
+            else:
+                self.expect_theta = 0
+                self.expect_x = 0
         else:
-            self.expect_theta = -(90 - self.a_r)
-            self.expect_x = self.leg.right_leg_x
+            if self.foot.right_line > 100:
+                self.expect_theta = 90
+            elif self.foot.right_rect == 90:
+                self.expect_theta = 0
+            else:
+                self.expect_theta = -(90 - self.foot.right_line)
+            if self.foot.right_line != 0:
+                self.expect_x = self.leg.right_leg_x
+            else:
+                self.expect_theta = 0
+                self.expect_x = 0
         pass
 
     def detect_front_and_back_foot(self):
@@ -170,57 +172,16 @@ class MatchCase(object):
         :return:
         """
         self.clear_expect()
-        self.average_foot()
         self.no_result = False
         dis = self.distance_detect_front_foot()
-        # self.img_detect_front_foot()
         if self.distance_same:
             self.not_distinguish = True
-            self.front = ""
-            # print("same ", dis)
+            self.front = self.distance_flag
         else:
             self.front = self.distance_flag
             self.not_distinguish = False
         # print("front is ", self.front, "is same?", self.not_distinguish, "has result?", self.no_result, dis)
         pass
-
-    # def img_detect_front_foot(self):
-    #     """
-    #     2.从图像上讲，近大远小哪只脚的面积比较大
-    #                         起始点比较考前
-    #     :return:
-    #     """
-    #     area_left = self.foot.foot_size_left_w * self.foot.foot_size_left_h
-    #     area_right = self.foot.foot_size_right_w * self.foot.foot_size_right_h
-    #     if area_right != 0:
-    #         result = area_left / area_right
-    #     else:
-    #         result = 100
-    #     if result > 1:
-    #         #     左脚比右脚大
-    #         temp_result_area = "left"
-    #     else:
-    #         temp_result_area = "right"
-    #     if 0.5 < result < 1.5:
-    #         self.img_size_same = True
-    #     else:
-    #         self.img_size_same = False
-    #
-    #     # original position
-    #     if self.foot.foot_position_left_y > self.foot.foot_position_right_y:
-    #         temp_result_distance = "left"
-    #     else:
-    #         temp_result_distance = "right"
-    #
-    #     # 这里面没有判断位置近似的情况
-    #     if temp_result_distance == temp_result_area:
-    #         self.img_flag = temp_result_area
-    #         self.img_dis_same = False
-    #     else:
-    #         # print("can not distinguish!")
-    #         self.img_dis_same = True
-    #     # print("img: ", temp_result_area, temp_result_distance, "is same ", self.img_size_same,self.img_dis_same)
-    #     return result
 
     def distance_detect_front_foot(self, step_dis=0.075):
         """
@@ -260,27 +221,6 @@ class MatchCase(object):
             else:
                 pass
 
-    def average_foot(self):
-        if len(self.average_l) < self.average_size:
-            self.average_l.append(self.foot.left_line)
-            self.average_r.append(self.foot.right_line)
-        else:
-            self.average_l.pop(0)
-            self.average_r.pop(0)
-            self.average_l.append(self.foot.left_line)
-            self.average_r.append(self.foot.right_line)
-            sum_l = 0
-            for i in self.average_l:
-                sum_l += i
-            avg_l = sum_l / self.average_size
-            sum_r = 0
-            for i in self.average_r:
-                sum_r += i
-            avg_r = sum_r / self.average_size
-            self.a_l = avg_l
-            self.a_r = avg_r
-            return avg_l, avg_r
-
     def clear_all(self):
         self.expect_x = 0.0
         self.expect_theta = 0.0
@@ -318,22 +258,3 @@ class MatchCase(object):
     def clear_foot_and_leg(self):
         # self.foot.clear_current_info()
         self.leg.clear_leg()
-
-    def draw_pic(self):
-        plt.figure(1)
-        plt.subplot(411)
-        plt.plot(self.average_l)
-        plt.subplot(412)
-        plt.plot(self.average_r)
-        plt.subplot(413)
-        plt.plot(self.gradient(self.gradient(self.average_l)))
-        plt.subplot(414)
-        plt.plot(self.gradient(self.gradient(self.average_r)))
-        plt.show()
-        pass
-
-    def gradient(self, list):
-        new_list = []
-        for i in range(len(list) - 1):
-            new_list.append(list[i + 1] - list[i])
-        return new_list

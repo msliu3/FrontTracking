@@ -28,18 +28,7 @@ import serial
 import math
 
 
-def singleton(cls, *args, **kw):
-    instances = {}
 
-    def _singleton():
-        if cls not in instances:
-            instances[cls] = cls(*args, **kw)
-        return instances[cls]
-
-    return _singleton
-
-
-@singleton
 class ControlDriver(Thread):
 
     def __init__(self, radius_wheel=85.00, record_mode=False, radius=0, left_right=1):
@@ -181,7 +170,7 @@ class ControlDriver(Thread):
             self.ser_r.write(bytes(right))
             self.ser_r.flush()
             self.ser_r.read(2)
-            time.sleep(0.2)
+            time.sleep(0.01)
             try:
                 watch = [0x80, 0x00, 0x80]
                 # 左轮
@@ -236,7 +225,7 @@ class ControlDriver(Thread):
                 #     time.time(), self.odo.get_dxdydtheta()[0], self.odo.get_dxdydtheta()[1], self.odo.getROS_XYTHETA()[0],
                 #     self.odo.getROS_XYTHETA()[1]))
             except IndexError as i:
-                print(i)
+                print(i,"except")
 
             self.ser_l.reset_input_buffer()
             self.ser_r.reset_input_buffer()
@@ -276,5 +265,5 @@ class ControlDriver(Thread):
 
 
 if __name__ == '__main__':
-    cd = ControlDriver()
+    cd = ControlDriver(record_mode=True)
     cd.start()
