@@ -170,7 +170,7 @@ class ControlDriver(Thread):
             self.ser_r.write(bytes(right))
             self.ser_r.flush()
             self.ser_r.read(2)
-            time.sleep(0.01)
+            time.sleep(0.05)
             try:
                 watch = [0x80, 0x00, 0x80]
                 # 左轮
@@ -265,5 +265,5 @@ class ControlDriver(Thread):
 
 
 if __name__ == '__main__':
-    cd = ControlDriver(record_mode=True)
+    cd = ControlDriver()
     cd.start()

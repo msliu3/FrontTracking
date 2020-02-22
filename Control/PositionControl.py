@@ -105,10 +105,10 @@ class PositionControl(object):
         pass
 
     def calculate_degree(self, l):
-        if self.omega > 0:
+        if self.expect_theta!=90:
             sin = math.sin(self.expect_x / (l - self.robot_r / 4) * 100)
         else:
-            sin = math.sin(self.expect_x / (l - self.robot_r / 4) * 100)
+            sin = math.sin(self.expect_x / (l + self.robot_r / 4) * 100)
         rad = math.asin(sin)
         return rad, math.degrees(rad)
 
@@ -138,8 +138,9 @@ class PositionControl(object):
     def action_forward_back(self, control_driver):
         self.action_over = False
         self.design_path_forward_and_back()
-        # print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
+        print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
         if self.speed != 0 or self.omega != 0:
+            print("set_driver",self.speed)
             self.set_driver(control_driver)
             time.sleep(self.running_time)
         self.clear_driver()

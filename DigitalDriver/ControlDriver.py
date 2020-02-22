@@ -133,7 +133,7 @@ class ControlDriver(Thread):
             # print(left, right)
             self.ser_l.write(bytes(left))
             self.ser_r.write(bytes(right))
-            time.sleep(0.3)
+            time.sleep(0.05)
             watch = [0x80, 0x00, 0x80]
             self.ser_l.write(bytes(watch))
             self.ser_r.write(bytes(watch))
@@ -143,7 +143,7 @@ class ControlDriver(Thread):
 
         self.ser_l.write(bytes(end))
         self.ser_r.write(bytes(end))
-        time.sleep(20)
+        time.sleep(0.2)
 
         return
 

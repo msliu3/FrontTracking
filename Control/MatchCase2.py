@@ -149,6 +149,8 @@ class MatchCase(object):
                 self.state = "turn right:left"
             elif self.foot.left_rect == 90:
                 self.expect_theta = 0
+                self.turning = False
+                self.forward = True
                 print("forward:l")
                 self.state = "forward:l"
             else:
@@ -164,6 +166,8 @@ class MatchCase(object):
             elif self.foot.right_rect == 90:
                 self.expect_theta = 0
                 print("forward:r")
+                self.turning = False
+                self.forward = True
                 self.state = "forward:r"
             else:
                 self.expect_theta = -(90 - self.foot.right_line)

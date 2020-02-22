@@ -37,9 +37,11 @@ def loop(control, matcher, pc, e):
         e.clear()
         if pc.action_over:
             if matcher.back or matcher.forward:
+                print("back_forward",pc.expect_x,pc.expect_theta)
                 pc.action_forward_back(control)
                 matcher.clear_case()
             elif matcher.turning:
+                print("turn")
                 pc.action_forward_and_turning(control)
                 matcher.clear_case()
 
