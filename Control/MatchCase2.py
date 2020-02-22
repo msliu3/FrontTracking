@@ -50,6 +50,8 @@ class MatchCase(object):
         self.turning = False
         self.back = False
 
+        self.state = None
+
         # 判断那只脚在前那只脚在后
         self.front = ""
         self.not_distinguish = False
@@ -96,10 +98,12 @@ class MatchCase(object):
             if -0.15 < front_x < 0.05:
                 self.rotate = True
                 print("rotate_front")
+                self.state = "rotate_front"
                 # self.base_foot()
             elif front_x < -0.15:
                 self.back = True
                 print("back")
+                self.state = "back"
                 self.go_back_or_forward(front_x)
                 return self.expect_x, self.expect_theta
             elif front_x > 0.05:
@@ -115,6 +119,8 @@ class MatchCase(object):
                     self.forward = True
                     self.go_back_or_forward(front_x)
                     print("forward")
+                    self.state = "forward"
+                    return self.expect_x, self.expect_theta
         # 总是能分出前后脚的所以不需要判断两脚并一块的情况
         # else:
         # print("No result:not_dis:",self.not_distinguish," front:",self.front)
@@ -139,28 +145,31 @@ class MatchCase(object):
         if self.front == "left":
             if self.foot.left_line > 100:
                 self.expect_theta = -90.0
-                # print("turn right")
+                print("turn right:left")
+                self.state = "turn right:left"
             elif self.foot.left_rect == 90:
                 self.expect_theta = 0
+                print("forward:l")
+                self.state = "forward:l"
             else:
                 self.expect_theta = 90 - self.foot.left_line
-            if self.foot.right_line != 0:
-                self.expect_x = self.leg.left_leg_x
-            else:
-                self.expect_theta = 0
-                self.expect_x = 0
+                print("turn left")
+                self.state = "turn left"
+            self.expect_x = self.leg.left_leg_x
         else:
             if self.foot.right_line > 100:
                 self.expect_theta = 90
+                print("turn left:right")
+                self.state = "turn left:right"
             elif self.foot.right_rect == 90:
                 self.expect_theta = 0
+                print("forward:r")
+                self.state = "forward:r"
             else:
                 self.expect_theta = -(90 - self.foot.right_line)
-            if self.foot.right_line != 0:
-                self.expect_x = self.leg.right_leg_x
-            else:
-                self.expect_theta = 0
-                self.expect_x = 0
+                print("turn right")
+                self.state = "turn right"
+            self.expect_x = self.leg.right_leg_x
         pass
 
     def detect_front_and_back_foot(self):

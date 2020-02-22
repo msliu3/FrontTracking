@@ -44,7 +44,10 @@ def loop(control, matcher, pc, e):
                 matcher.clear_case()
 
 
+
 def loop2(matcher, queue, event):
+    state_list = []
+    state_num = 3
     while True:
         time.sleep(0.3)
         # print(queue.qsize())
@@ -53,9 +56,17 @@ def loop2(matcher, queue, event):
             matcher.foot = queue.get(block=False)
         matcher.detect_front_and_back_foot()
         x, theta = matcher.detect_case()
-        # print("x and theta matcher", x, theta)
-        pc.set_expect(x, theta)
-        event.set()
+        state_list.append(matcher.state)
+        if len(state_list) == state_num:
+            if state_list.count(state_list[-1]) == state_num:
+                print("action",x, theta)
+                pc.set_expect(x, theta)
+                event.set()
+        # for i in state_list:
+        #     print(i,end=" ")
+        # print()
+        if len(state_list) >= state_num:
+            state_list.pop(0)
         matcher.clear_expect()
         matcher.clear_foot_and_leg()
 
