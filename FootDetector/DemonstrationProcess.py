@@ -116,13 +116,18 @@ class DemonProcess(object):
         is_foot = pf.detect_is_foot(temperature)
         if not is_foot:
             return None, None, False
+        result, flag, kmeans_env,foot_RIO = pf.k_means_detect(temperature)
+        # print(kmeans_env,foot_RIO)
+        fix_temp = np.array(temp_data).reshape(24, 32)
+        fix_temp[4:7, 0:4] = kmeans_env-0.5
+        temp_data = list(fix_temp)
 
         temp_data = pf.filter_temperature(temp_data)
         max_temp = max(temp_data)
         min_temp = min(temp_data)
+        # print(max_temp,min_temp)
         # temp_data = pf.filter_high_temperature(temp_data)
 
-        result, flag, kmeans_env = pf.k_means_detect(temperature)
         # print("kmeans env:", kmeans_env)
         # print("foot is %d" % flag)
         for i in range(len(temp_data)):
@@ -381,7 +386,7 @@ class DemonProcess(object):
                         # print("right_angle: ", self.foot.right_line, self.foot.right_rect)
                         # print("left_angle: ", self.foot.left_line, self.foot.left_rect)
 
-                        if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='fr'ame-by-frame'
+                        if self.demo_record(ir_np) == -1:  # , 'continuous' , mode='frame-by-frame'
                             break
 
                     # ir_np, contours = dp.binary_image(np.array(ir_np))

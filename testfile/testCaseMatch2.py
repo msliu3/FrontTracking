@@ -26,7 +26,7 @@ import FootDetector.DemonstrationProcess as DP
 # import numpy as np
 
 import threading
-import DigitalDriver.ControlDriver as CD
+import DigitalDriver.ControlandOdometryDriver as CD
 import Control.PositionControl as PC
 import multiprocessing
 
@@ -34,20 +34,19 @@ import multiprocessing
 def loop(control, matcher, pc, e):
     while True:
         e.wait()
-        e.clear()
         if pc.action_over:
             if matcher.back or matcher.forward:
-                print("back_forward",pc.expect_x,pc.expect_theta)
+                # print("back_forward", pc.expect_x, pc.expect_theta)
                 pc.action_forward_back(control)
                 matcher.clear_case()
             elif matcher.turning:
-                print("turn")
+                # print("turn")
                 pc.action_forward_and_turning(control)
                 matcher.clear_case()
+        e.clear()
 
 
-
-def loop2(matcher, queue, event):
+def loop2(matcher, queue, event, pc):
     state_list = []
     state_num = 3
     while True:
@@ -59,19 +58,18 @@ def loop2(matcher, queue, event):
         matcher.detect_front_and_back_foot()
         x, theta = matcher.detect_case()
         state_list.append(matcher.state)
-        if len(state_list) == state_num:
+        if len(state_list) == state_num and pc.action_over:
             if state_list.count(state_list[-1]) == state_num:
-                print("action",x, theta)
+                print("action", x, theta)
                 pc.set_expect(x, theta)
                 event.set()
+                matcher.clear_expect()
+                matcher.clear_foot_and_leg()
         # for i in state_list:
         #     print(i,end=" ")
         # print()
         if len(state_list) >= state_num:
             state_list.pop(0)
-        matcher.clear_expect()
-        matcher.clear_foot_and_leg()
-
 
 
 if __name__ == '__main__':
@@ -88,5 +86,5 @@ if __name__ == '__main__':
 
     p1 = threading.Thread(target=loop, args=(cd, mc, pc, event))
     p1.start()
-    p2 = threading.Thread(target=loop2, args=(mc, queue, event))
+    p2 = threading.Thread(target=loop2, args=(mc, queue, event, pc))
     p2.start()

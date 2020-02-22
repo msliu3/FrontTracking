@@ -68,7 +68,7 @@ class PositionControl(object):
             else:
                 self.omega = -0.4
             rad = math.radians(self.expect_theta)
-            self.running_time = abs(rad) / abs(self.omega)
+            self.running_time = float(abs(rad) / abs(self.omega))
         pass
 
     def design_path_forward_and_turning(self):
@@ -99,7 +99,7 @@ class PositionControl(object):
         print(self.expect_x, self.expect_theta)
         rad, degree = self.calculate_degree(self.radius)
         # print("rad: ", rad, "degree: ", degree)
-        self.running_time = abs(rad / self.omega)
+        self.running_time = float(abs(rad / self.omega))
 
         # print(self.running_time)
         pass
@@ -122,7 +122,7 @@ class PositionControl(object):
         else:
             self.clear_driver()
             return
-        self.running_time = abs(self.expect_x) / abs(self.speed)
+        self.running_time = float(abs(self.expect_x) / abs(self.speed))
 
     def set_expect(self, expect_x, expect_theta):
         self.expect_x = expect_x
@@ -140,7 +140,6 @@ class PositionControl(object):
         self.design_path_forward_and_back()
         print("action: speed", self.speed, " omega", self.omega, " radius", self.radius, " time", self.running_time)
         if self.speed != 0 or self.omega != 0:
-            print("set_driver",self.speed)
             self.set_driver(control_driver)
             time.sleep(self.running_time)
         self.clear_driver()

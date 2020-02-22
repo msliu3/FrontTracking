@@ -352,9 +352,9 @@ def k_means_detect(temperature):
     temp1 = temp1 / num1
 
     if temp0 > temp1:
-        return result, 0, env_max1
+        return result, 0, env_max1, env_max0
     else:
-        return result, 1, env_max0
+        return result, 1, env_max0, env_max1
 
 
 def filter_temperature(temp, kernel_num=3):
