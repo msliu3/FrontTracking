@@ -56,7 +56,7 @@ def detect_serials(description, vid=0x10c4, pid=0xea60):
 
 class ArduinoRead(object):
     def __init__(self):
-        port_name = detect_serials(description="ttyACM") #CP2102 USB to UART Bridge Controller Arduino Mega 2560 (COM15)
+        port_name = detect_serials(description="Mega 2560 (COM15)") #CP2102 USB to UART Bridge Controller Arduino Mega 2560 (COM15)
         baud_rate = 115200
         print(port_name, baud_rate)
         self.serial = serial.Serial(port_name, baud_rate, timeout=None)
@@ -72,12 +72,10 @@ class ArduinoRead(object):
     def reading_data_from_arduino(self):
         while not self.terminal_flage:
             data = self.serial.readline()
-            line = str(data)
-            list_data = re.findall("\d+\.\d+", line)
-            print(list_data)
-            if len(list_data) == 2:
-                self.imu_human = list_data[0]
-                self.imu_robot = list_data[1]
+            line = data.decode()
+            self.imu_human = float(line)
+
+            print(self.imu_human)
 
 
 if __name__ == '__main__':
