@@ -15,40 +15,28 @@ None
 import os
 import sys
 import time
-
+import threading
 pwd = os.path.abspath(os.path.abspath(__file__))
 father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
 sys.path.append(father_path)
-import threading
-
 import Control.MatchCase2 as MC
 import FootDetector.DemonstrationProcess as DP
 # import numpy as np
 
-import threading
 import DigitalDriver.ControlandOdometryDriver as CD
-import Control.PositionControl as PC
+import Control.PositionControl2 as PC
 import multiprocessing
 
 
-def loop(control, matcher, pc, e):
+def loop(control, pc):
     while True:
-        e.wait()
-        if pc.action_over:
-            if matcher.back or matcher.forward:
-                # print("back_forward", pc.expect_x, pc.expect_theta)
-                pc.action_forward_back(control)
-                matcher.clear_case()
-            elif matcher.turning:
-                # print("turn")
-                pc.action_forward_and_turning(control)
-                matcher.clear_case()
-        e.clear()
+        time.sleep(0.5)
+        pc.top_decision(control)
 
 
-def loop2(matcher, queue, event):
+def loop2(matcher, queue, pc):
     state_list = []
-    state_num = 4
+    state_num = 5
     while True:
         time.sleep(0.3)
         # print(queue.qsize())
@@ -62,7 +50,7 @@ def loop2(matcher, queue, event):
             if state_list.count(state_list[-1]) == state_num:
                 print("action", x, theta)
                 pc.set_expect(x, theta)
-                event.set()
+                # print("data read!!!!!!")
                 matcher.clear_expect()
                 matcher.clear_foot_and_leg()
         # for i in state_list:
@@ -72,19 +60,33 @@ def loop2(matcher, queue, event):
             state_list.pop(0)
 
 
+def loop_stop():
+    global flag_stop
+    end = input()
+    while end == "":
+        flag_stop = 0
+
+
 if __name__ == '__main__':
     pd = DP.DemonProcess()
     cd = CD.ControlDriver()
     mc = MC.MatchCase(foot=pd.foot)
-    pc = PC.PositionControl()
+    pc = PC.PositionControl2()
     event = threading.Event()
     queue = multiprocessing.Queue()
+
+    flag_stop = 1
+
     thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(queue,))
     thread_ir.start()
     thread_control_driver = threading.Thread(target=cd.control_part, args=())
     thread_control_driver.start()
-
-    p1 = threading.Thread(target=loop, args=(cd, mc, pc, event))
+    p1 = threading.Thread(target=loop, args=(cd, pc))
     p1.start()
-    p2 = threading.Thread(target=loop2, args=(mc, queue, event))
+    p2 = threading.Thread(target=loop2, args=(mc, queue, pc))
     p2.start()
+    p3 = threading.Thread(target=loop_stop(), args=())
+    p3.start()
+
+
+
