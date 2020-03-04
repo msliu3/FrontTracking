@@ -20,7 +20,12 @@ try:
         response = response.split('\r')[0]
         response = response.split(',')
         response = list(map(int, response))
+        print(response)
         # print(response, len(response), type(response))
 except:
     print('Failure!')
     ser.close()
+
+if __name__ == '__main__':
+
+    pass

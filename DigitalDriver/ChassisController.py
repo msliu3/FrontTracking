@@ -244,7 +244,7 @@ class ControlDriver(Thread):
 
 
 if __name__ == '__main__':
-    cd = ControlDriver(V=0, OMEGA=0.05, record_mode=False)
+    cd = ControlDriver(V=0, OMEGA=0.01, record_mode=False)
     cd.start()
     while True:
         new_V = input('New speed: ')
