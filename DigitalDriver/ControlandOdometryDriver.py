@@ -31,7 +31,7 @@ import math
 
 class ControlDriver(Thread):
 
-    def __init__(self, radius_wheel=85.00, record_mode=False, radius=0, left_right=1):
+    def __init__(self, radius_wheel=85.00, record_mode=False, radius=0, left_right=0):
         """
 
         :param radius_wheel:
