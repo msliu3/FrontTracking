@@ -72,12 +72,11 @@ class ArduinoRead(object):
     def reading_data_from_arduino(self):
         while not self.terminal_flage:
             data = self.serial.readline()
-            line = str(data)
-            list_data = re.findall("\d+\.\d+", line)
-            print(list_data)
-            if len(list_data) == 2:
-                self.imu_human = list_data[0]
-                self.imu_robot = list_data[1]
+            line = data.decode()
+            self.imu_human = float(line)
+
+            # print(self.imu_human)
+
 
 
 if __name__ == '__main__':
