@@ -51,7 +51,7 @@ def detect_serials(description="target device", vid=0x10c4, pid=0xea60):
 
 class SoftSkin(object):
     def __init__(self):
-        port_name = detect_serials(description="Mega 2560")  # Arduino Mega 2560
+        port_name = detect_serials(description="ttyACM0")  # Arduino Mega 2560 ttyACM0
         baud_rate = 9600
         print(port_name, baud_rate)
         self.serial = serial.Serial(port_name, baud_rate, timeout=None)
@@ -130,7 +130,7 @@ class SoftSkin(object):
         self.right_skin = False
         pass
 
-    def basical_control(self, control_driver, setup=(0.2, 0.2, 56 / 2)):
+    def basical_control(self, control_driver, setup=(0.5, 0.4, 56 / 2),sit_mode = False):
         """
         根据soft skin被按下的状态，将控制分解为，前行，后退，左转，右转
         前行：
@@ -156,14 +156,24 @@ class SoftSkin(object):
             control_driver.radius = 0
         elif self.left_skin:
             print("turning left")
-            control_driver.speed = 0
-            control_driver.omega = setup[1]
-            control_driver.radius = setup[2]
+            if not sit_mode:
+                control_driver.speed = 0
+                control_driver.omega = setup[1]
+                control_driver.radius = setup[2]
+            else:
+                control_driver.speed = 0
+                control_driver.omega = -setup[1]
+                control_driver.radius = setup[2]
         elif self.right_skin:
             print("turning right")
-            control_driver.speed = 0
-            control_driver.omega = -setup[1]
-            control_driver.radius = setup[2]
+            if not sit_mode:
+                control_driver.speed = 0
+                control_driver.omega = -setup[1]
+                control_driver.radius = setup[2]
+            else:
+                control_driver.speed = 0
+                control_driver.omega = setup[1]
+                control_driver.radius = setup[2]
         elif not(self.left_skin and self.front_skin and self.right_skin):
             print("stop")
             control_driver.speed = 0
@@ -178,5 +188,5 @@ if __name__ == '__main__':
     softskin.build_base_line_data()
     while True:
         softskin.normalize_set_group()
-        softskin.basical_control(control_driver)
+        softskin.basical_control(control_driver,sit_mode=True)
         softskin.clear_skin_state()

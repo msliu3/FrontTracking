@@ -6,7 +6,7 @@
 
 @Modify Time      @Author    @Version
 ------------      -------    --------
-2019/10/16 21:46   msliu      1.0      
+2019/10/16 21:46   msliu      1.0
 
 @Description
 ------------
@@ -29,7 +29,7 @@ import time
 from threading import Thread
 
 # 在这根据运行环境是Win还是Linux判断需要用的文件是 DigitalServoDriver_linux和DigitalServoDriver
-import DigitalDriver.DigitalServoDriver as DsD
+import DigitalDriver.DigitalServoDriver_linux as DsD
 import serial
 import math
 

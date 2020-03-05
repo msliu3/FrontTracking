@@ -20,8 +20,8 @@ class ControlDriver(Thread):
             或 1 改为 0
         """
         Thread.__init__(self)
-        self.radius_wheel = 85.00   #车轮半径
-        self.wheel_base = 540.00    #轮距
+        self.radius_wheel = 85.00   #车轮半径/mm
+        self.wheel_base = 540.00    #轮距/mm
         self.record_mode = record_mode
         self.position_mode = position_mode
         self.speed = V  #线速度
@@ -71,8 +71,8 @@ class ControlDriver(Thread):
         # 计算两轮线速度
         # v_r = (2V + omega * wheelbase) / 2*wheel_radius
         # v_l = (2V - omega * wheelbase) / 2*wheel_radius
-        vr = (2*self.speed + self.omega * self.wheel_base) / (2*self.radius_wheel)
-        vl = (2*self.speed - self.omega * self.wheel_base) / (2*self.radius_wheel)
+        vl = (2*self.speed - self.omega * self.wheel_base / 1000) / 2
+        vr = (2*self.speed + self.omega * self.wheel_base / 1000) / 2
         return vl, vr
 
     def speed2rpm(self, speed):
@@ -81,24 +81,23 @@ class ControlDriver(Thread):
         return int(rpm)
 
     def get_rpm_byte(self, rpm):
-        rpm_byte = [0x06, ]
+        rpm_byte = [0x06, 0x00, 0x88, 0x8e]
         rpm_hex = int(rpm / 6000 * 16384)
-
         if rpm_hex >= 0:
             rpm = [(rpm_hex & 0xFF00) >> 8, (rpm_hex & 0x00FF)]
         else:
             temp = 0xFFFF
             rpm_hex = temp + rpm_hex
             rpm = [(rpm_hex & 0xFF00) >> 8, (rpm_hex & 0x00FF)]
-
-        rpm_byte.append(rpm[0])
-        rpm_byte.append(rpm[1])
-        parity = 0
+        rpm_byte[1] = rpm[0]
+        rpm_byte[2] = rpm[1]
+        rpm_byte.pop(3)
+        last = 0
         for item in rpm_byte:
-            parity = parity + item
-        if parity > 256:
-            parity = parity & 0xFF
-        rpm_byte.append(parity)
+            last = last + item
+        if last > 256:
+            last = last & 0xFF
+        rpm_byte.append(last)
         return rpm_byte
 
     def control_part_speedmode(self):
@@ -120,13 +119,12 @@ class ControlDriver(Thread):
             self.stopMotor()
 
         while True:
-            # 读取驱动器监控信息
             vl, vr = self.get_wheel_speed()
+            print("left: ", vl, "; right: ", vr)
+            left = self.get_rpm_byte(-(self.speed2rpm(vl)))
+            right = self.get_rpm_byte(self.speed2rpm(vr))
+            print("byte_left: ", left, "byte_right: ", right)
 
-            left = self.get_rpm_byte( self.speed2rpm(vl) )
-            right = self.get_rpm_byte(-(self.speed2rpm(vr)))
-
-            # print(left, right)
             self.ser_l.write(bytes(left))
             self.ser_l.flush()
             self.ser_l.read(2)
@@ -243,11 +241,5 @@ class ControlDriver(Thread):
 
 
 if __name__ == '__main__':
-    cd = ControlDriver(V=0, OMEGA=0.01, record_mode=False)
+    cd = ControlDriver(V=0, OMEGA=-0.1, record_mode=False)
     cd.start()
-    while True:
-        new_V = input('New speed: ')
-        new_OMEGA = input('New OMEGA: ')
-        cd.speed = new_V
-        cd.omega = new_OMEGA
-        time.sleep(0.1)

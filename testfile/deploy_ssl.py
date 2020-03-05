@@ -742,7 +742,7 @@ def loop_record(control, source='1'):
         print("invalids_dire of walker: ", invalids_dire)
 
         # transform walker direction to mic direction
-        invalids_idx = [(i + 45) % 360 / 45 for i in invalids_dire]
+        invalids_idx = [(i + 45) % 360 / ls
 
         print("invalids_idx of mic: ", invalids_idx)
 

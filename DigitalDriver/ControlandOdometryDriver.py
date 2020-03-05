@@ -58,7 +58,7 @@ class ControlDriver(Thread):
         self.record_mode = record_mode
         self.radius = radius
         self.speed = 0
-        self.omega = 0
+        self.omega = 0.0
         self.position = [0.0, 0.0, 0.0]
         self.count = 0
         driver = DsD.DigitalServoDriver(left_right=left_right)
@@ -171,7 +171,7 @@ class ControlDriver(Thread):
                 right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
             else:
                 # print((self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed)))
-                left = self.get_rpm_byte((self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed)))
+                left = self.get_rpm_byte(self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed))
                 right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
             # print(left, right)
             self.ser_l.write(bytes(left))
