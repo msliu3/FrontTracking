@@ -1,21 +1,7 @@
-'''
-@File    :   odometry.py
-@Contact :   mspzhuz@gmail.com
-
-@Modify Time      @Author    @Version
-------------      -------    --------
-2019/12/11 22:21   zzhu       1.0
-
-@Description
----------------------------------
-接受两轮编码器的位置信息，计算walker相对于上一时刻的偏转角dθ，坐标变化dx、 dy
-'''
-
 import numpy as np
 import matplotlib.pyplot as plt
 from DigitalDriver import ControlDriver as CD
 import math
-
 
 class Odometry:
     def __init__(self, X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0, plot=False):

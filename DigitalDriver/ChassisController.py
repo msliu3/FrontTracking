@@ -1,4 +1,3 @@
-import datetime
 import time
 from threading import Thread
 from DigitalDriver import DigitalServoDriver_linux as DsD
