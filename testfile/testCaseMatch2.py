@@ -46,9 +46,9 @@ def loop(control, matcher, pc, e):
         e.clear()
 
 
-def loop2(matcher, queue, event):
+def loop2(matcher, queue, event, pc):
     state_list = []
-    state_num = 4
+    state_num = 3
     while True:
         time.sleep(0.3)
         # print(queue.qsize())
@@ -58,9 +58,9 @@ def loop2(matcher, queue, event):
         matcher.detect_front_and_back_foot()
         x, theta = matcher.detect_case()
         state_list.append(matcher.state)
-        if len(state_list) == state_num:
+        if len(state_list) == state_num and pc.action_over:
             if state_list.count(state_list[-1]) == state_num:
-                print("action", x, theta)
+                # print("action", x, theta)
                 pc.set_expect(x, theta)
                 event.set()
                 matcher.clear_expect()
@@ -74,17 +74,17 @@ def loop2(matcher, queue, event):
 
 if __name__ == '__main__':
     pd = DP.DemonProcess()
-    cd = CD.ControlDriver()
+    # cd = CD.ControlDriver()
     mc = MC.MatchCase(foot=pd.foot)
     pc = PC.PositionControl()
     event = threading.Event()
     queue = multiprocessing.Queue()
     thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(queue,))
     thread_ir.start()
-    thread_control_driver = threading.Thread(target=cd.control_part, args=())
-    thread_control_driver.start()
+    # thread_control_driver = threading.Thread(target=cd.control_part, args=())
+    # thread_control_driver.start()
 
-    p1 = threading.Thread(target=loop, args=(cd, mc, pc, event))
-    p1.start()
-    p2 = threading.Thread(target=loop2, args=(mc, queue, event))
+    # p1 = threading.Thread(target=loop, args=(cd, mc, pc, event))
+    # p1.start()
+    p2 = threading.Thread(target=loop2, args=(mc, queue, event, pc))
     p2.start()

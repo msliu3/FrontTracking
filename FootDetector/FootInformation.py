@@ -129,7 +129,7 @@ class FootInformation(Thread):
             self.left_line = 90 + temp
 
         text = "left: " + str(round(self.left_line, 2)) + " right: " + str(round(self.right_line, 2))
-        cv.putText(self.image, text, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv.LINE_AA)
+        # cv.putText(self.image, text, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv.LINE_AA)
         # print(self.left_line, self.right_line)
 
     def assign_img_and_pattern(self, np_ir, foot_pattern):

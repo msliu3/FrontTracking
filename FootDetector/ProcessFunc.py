@@ -191,7 +191,7 @@ def draw_three(image, cnt_list):
 
 def draw_normal_rectangle(img, np_point, color=(0, 0, 255)):
     x, y, w, h = cv.boundingRect(np_point)
-    cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
+    cv.rectangle(img, (x, y), (x + w, y + h), color, thickness=5)
     return x, y, w, h
 
 
@@ -199,7 +199,7 @@ def draw_min_rectangle(img, np_point, color=(0, 0, 255)):
     rect = cv.minAreaRect(np_point)
     box = cv.boxPoints(rect)
     box = np.int0(box)
-    cv.drawContours(img, [box], 0, color, 2)
+    cv.drawContours(img, [box], 0, color, thickness=5)
     return rect
 
 
@@ -218,7 +218,7 @@ def draw_min_line(img, np_point, color=(0, 0, 255)):
     [vx, vy, x, y] = cv.fitLine(np_point, cv.DIST_L2, 0, 0.01, 0.01)
     lefty = int((-x * vy / vx) + y)
     righty = int(((cols - x) * vy / vx) + y)
-    cv.line(img, (cols - 1, righty), (0, lefty), (0, 255, 0), 2)
+    cv.line(img, (cols - 1, righty), (0, lefty), (0, 255, 0),thickness=5)
     h = math.atan((lefty - righty) / (0 - cols + 1))
     angle = math.degrees(h)
     # print("rows: %d cols: %d" % (rows, cols))

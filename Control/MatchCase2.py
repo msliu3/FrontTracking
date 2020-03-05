@@ -111,9 +111,9 @@ class MatchCase(object):
                     print("turing and forward:", self.front)
                     self.turning = True
                     self.go_turning_and_forward()
-                    print("---------------------------------------------")
-                    print(self.expect_theta)
-                    print("---------------------------------------------")
+                    # print("---------------------------------------------")
+                    # print(self.expect_theta)
+                    # print("---------------------------------------------")
                     return self.expect_x, self.expect_theta
                 else:
                     self.forward = True
