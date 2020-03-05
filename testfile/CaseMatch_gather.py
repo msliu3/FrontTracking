@@ -10,10 +10,10 @@ father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
 sys.path.append(father_path)
 import threading
 
-import Control.MatchCase as MC
+import Control.MatchCase2 as MC
 import FootDetector.DemonstrationProcess as DP
 import LegDetector.LegInformation as LegLidar
-import GatherData.gatherIMU as imu
+import GatherData_visualization.gatherIMU as imu
 # import numpy as np
 
 import DigitalDriver.ControlandOdometryDriver as CD
@@ -21,33 +21,71 @@ import Control.PositionControl as PC
 import multiprocessing
 
 
+# def loop(control, matcher, pc, e):
+#     while True:
+#         e.wait()
+#         e.clear()
+#         if pc.action_over:
+#             if matcher.back or matcher.forward:
+#                 pc.action_forward_back(control)
+#                 matcher.clear_case()
+#             elif matcher.turning:
+#                 pc.action_forward_and_turning(control)
+#                 matcher.clear_case()
+
 def loop(control, matcher, pc, e):
     while True:
         e.wait()
-        e.clear()
         if pc.action_over:
             if matcher.back or matcher.forward:
+                # print("back_forward", pc.expect_x, pc.expect_theta)
                 pc.action_forward_back(control)
                 matcher.clear_case()
             elif matcher.turning:
+                # print("turn")
                 pc.action_forward_and_turning(control)
                 matcher.clear_case()
+        e.clear()
 
+# def loop2(matcher, queue, event):
+#     while True:
+#         time.sleep(0.25)
+#         # print(queue.qsize())
+#         if not queue.empty():
+#             print("assign")
+#             matcher.foot = queue.get(block=False)
+#         matcher.detect_front_and_back_foot()
+#         x, theta = matcher.detect_case()
+#         # print("x and theta matcher", x, theta)
+#         pc.set_expect(x, theta)
+#         event.set()
+#         matcher.clear_expect()
+#         matcher.clear_foot_and_leg()
 
 def loop2(matcher, queue, event):
+    state_list = []
+    state_num = 4
     while True:
-        time.sleep(0.25)
+        time.sleep(0.3)
         # print(queue.qsize())
         if not queue.empty():
-            print("assign")
+            # print("assign")
             matcher.foot = queue.get(block=False)
         matcher.detect_front_and_back_foot()
         x, theta = matcher.detect_case()
-        # print("x and theta matcher", x, theta)
-        pc.set_expect(x, theta)
-        event.set()
-        matcher.clear_expect()
-        matcher.clear_foot_and_leg()
+        state_list.append(matcher.state)
+        if len(state_list) == state_num:
+            if state_list.count(state_list[-1]) == state_num:
+                print("action", x, theta)
+                pc.set_expect(x, theta)
+                event.set()
+                matcher.clear_expect()
+                matcher.clear_foot_and_leg()
+        # for i in state_list:
+        #     print(i,end=" ")
+        # print()
+        if len(state_list) >= state_num:
+            state_list.pop(0)
 
 # class gatherData():
 #     def __init__(self):
@@ -58,8 +96,8 @@ def loop2(matcher, queue, event):
 
 def loop_gatherData():
     while True:
-        time.sleep(0.05)
-        end = input("----------end?------------")
+        time.sleep(0.1)
+        end = input()
         if end == "":
             global flag_stop_writing
             flag_stop_writing = 0
@@ -109,7 +147,7 @@ if __name__ == '__main__':
     with open(data_path, 'w') as file:
         while True:
             time.sleep(0.25)
-            print(cd.odo.getROS_XYTHETA()[2])
+            # print(cd.odo.getROS_XYTHETA()[2])
             # print("type of IMU is:", type(IMU.imu_human))
             # print("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f" % (time.time(),
             #                                                       cd.odo.getROS_XYTHETA()[0],
@@ -136,9 +174,9 @@ if __name__ == '__main__':
                                                                          leg.left_leg_y,
                                                                          leg.right_leg_x,
                                                                          leg.right_leg_y,
-
-                                                                         float(IMU.imu_human)
+                                                                         IMU.imu_human
                                                                          ))
+            print("File being written")
             if flag_stop_writing == 0:
                 break
     file.close()

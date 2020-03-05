@@ -1,23 +1,3 @@
-#!/usr/bin/env python
-# -*- encoding: utf-8 -*-
-"""
-@File    :   ControlDriver.py    
-@Contact :   liumingshanneo@163.com
-
-@Modify Time      @Author    @Version
-------------      -------    --------
-2019/10/16 21:46   msliu      1.0      
-
-@Description
-------------
-这是一个包含odoemtary和control的数字伺服器控制器
-
-接受一个线速度v和角速度w，旋转半径r
-
-根据线速度和角速度，结算实际转速(RPM-Revolutions Per Minute)
-
-"""
-import datetime
 import time
 from threading import Thread
 from DigitalDriver import DigitalServoDriver_linux as DsD
@@ -27,22 +7,9 @@ import matplotlib.pyplot as plt
 import serial
 import math
 
-
-# def singleton(cls, *args, **kw):
-#     instances = {}
-#
-#     def _singleton():
-#         if cls not in instances:
-#             instances[cls] = cls(*args, **kw)
-#         return instances[cls]
-#
-#     return _singleton
-#
-#
-# @singleton
 class ControlDriver(Thread):
 
-    def __init__(self, radius_wheel=85.00, record_mode=False, radius=0, left_right=0):
+    def __init__(self, V=0.0, OMEGA=0.0, record_mode=False, position_mode=False, left_right=1):
         """
         :param radius_wheel:
         :param record_mode:
@@ -52,20 +19,20 @@ class ControlDriver(Thread):
             将 0 改为 1
             或 1 改为 0
         """
-        # radius_wheel = 52.55
         Thread.__init__(self)
-        self.radius_wheel = radius_wheel
+        self.radius_wheel = 85.00   #车轮半径
+        self.wheel_base = 540.00    #轮距
         self.record_mode = record_mode
-        self.radius = radius
-        self.speed = 0
-        self.omega = 0
+        self.position_mode = position_mode
+        self.speed = V  #线速度
+        self.omega = OMEGA  #角速度
         self.position = [0.0, 0.0, 0.0]
         self.count = 0
         driver = DsD.DigitalServoDriver(left_right=left_right)
         self.left_right = left_right
         baud_rate = driver.baud_rate
-        self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.05)
-        self.ser_r = serial.Serial(driver.right, baud_rate, timeout=0.05)
+        self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.05)    #左轮串口
+        self.ser_r = serial.Serial(driver.right, baud_rate, timeout=0.05)   #右轮串口
         self.monitor_l = DM.DriverMonitor()
         self.monitor_r = DM.DriverMonitor()
         self.plot_x = [0.0]
@@ -100,49 +67,42 @@ class ControlDriver(Thread):
         self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
         # time.sleep(2)
 
+    def get_wheel_speed(self):
+        # 计算两轮线速度
+        # v_r = (2V + omega * wheelbase) / 2*wheel_radius
+        # v_l = (2V - omega * wheelbase) / 2*wheel_radius
+        vr = (2*self.speed + self.omega * self.wheel_base) / (2*self.radius_wheel)
+        vl = (2*self.speed - self.omega * self.wheel_base) / (2*self.radius_wheel)
+        return vl, vr
+
+    def speed2rpm(self, speed):
+        # 线速度 --> 角速度
+        rpm = speed / (2 * math.pi * self.radius_wheel / 1000) * 60
+        return int(rpm)
+
     def get_rpm_byte(self, rpm):
-        rpm_byte = [0x06, 0x00, 0x88, 0x8e]
+        rpm_byte = [0x06, ]
         rpm_hex = int(rpm / 6000 * 16384)
+
         if rpm_hex >= 0:
             rpm = [(rpm_hex & 0xFF00) >> 8, (rpm_hex & 0x00FF)]
         else:
             temp = 0xFFFF
             rpm_hex = temp + rpm_hex
             rpm = [(rpm_hex & 0xFF00) >> 8, (rpm_hex & 0x00FF)]
-        rpm_byte[1] = rpm[0]
-        rpm_byte[2] = rpm[1]
-        rpm_byte.pop(3)
-        last = 0
+
+        rpm_byte.append(rpm[0])
+        rpm_byte.append(rpm[1])
+        parity = 0
         for item in rpm_byte:
-            last = last + item
-        if last > 256:
-            last = last & 0xFF
-        rpm_byte.append(last)
+            parity = parity + item
+        if parity > 256:
+            parity = parity & 0xFF
+        rpm_byte.append(parity)
         return rpm_byte
 
-    def get_speed_rpm(self, w):
-        rpm = w / (2 * math.pi * self.radius_wheel / 1000) * 60
-        # print(int(rpm))
-        return int(rpm)
-
-    def get_rpm_Omega(self):
-        """
-        r * w = v = l (vr + vl)
-                    -----------
-                    2 (vr - vl)
-        :return:
-        """
-        if self.omega > 0:
-            vl = (self.radius + (56 / 2)) / 100 * self.omega
-            vr = (self.radius - (56 / 2)) / 100 * self.omega
-        else:
-            vl = -(self.radius - (56 / 2)) / 100 * self.omega
-            vr = -(self.radius + (56 / 2)) / 100 * self.omega
-
-        return vl, vr
-
-    def control_part(self):
-        print("\n===================================== Start control part! =====================================")
+    def control_part_speedmode(self):
+        print("\n===================================== Start speed control ! =====================================")
         start = [0x00, 0x00, 0x01, 0x01]
         pc_mode = [0x02, 0x00, 0xc4, 0xc6]
         end = [0x00, 0x00, 0x00, 0x00]
@@ -161,18 +121,11 @@ class ControlDriver(Thread):
 
         while True:
             # 读取驱动器监控信息
-            vl, vr = self.get_rpm_Omega()
-            # print("Omega: %f %f" %( vl, vr))
-            # print("Speed: %f " % self.speed)
+            vl, vr = self.get_wheel_speed()
 
-            # 这里是个bug没修复，需要确保 self.speed 和 self.omega 只有一个有值（另一个需要为0）
-            if self.left_right == 1:
-                left = self.get_rpm_byte(self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed))
-                right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
-            else:
-                # print((self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed)))
-                left = self.get_rpm_byte((self.get_speed_rpm(vl) + self.get_speed_rpm(self.speed)))
-                right = self.get_rpm_byte(-(self.get_speed_rpm(vr) + self.get_speed_rpm(self.speed)))
+            left = self.get_rpm_byte( self.speed2rpm(vl) )
+            right = self.get_rpm_byte(-(self.speed2rpm(vr)))
+
             # print(left, right)
             self.ser_l.write(bytes(left))
             self.ser_l.flush()
@@ -180,7 +133,7 @@ class ControlDriver(Thread):
             self.ser_r.write(bytes(right))
             self.ser_r.flush()
             self.ser_r.read(2)
-            time.sleep(0.2)
+            time.sleep(0.05)
             try:
                 watch = [0x80, 0x00, 0x80]
                 # 左轮
@@ -234,10 +187,25 @@ class ControlDriver(Thread):
                 #     time.time(), self.odo.get_dxdydtheta()[0], self.odo.get_dxdydtheta()[1], self.odo.getROS_XYTHETA()[0],
                 #     self.odo.getROS_XYTHETA()[1]))
             except IndexError as i:
-                print(i)
+                print(i,"except")
 
             self.ser_l.reset_input_buffer()
             self.ser_r.reset_input_buffer()
+        pass
+
+    def control_part_positionmode(self):
+        print("\n===================================== Start position control ! =====================================")
+        start = [0x00, 0x00, 0x01, 0x01]
+        pc_mode = [0x02, 0x00, 0xd0, 0xd2]
+        end = [0x00, 0x00, 0x00, 0x00]
+        self.ser_l.write(bytes(start))
+        self.ser_l.read(2)
+        self.ser_r.write(bytes(start))
+        self.ser_r.read(2)
+        self.ser_l.write(bytes(pc_mode))
+        self.ser_l.read(2)
+        self.ser_r.write(bytes(pc_mode))
+        self.ser_r.read(2)
         pass
 
     def stopMotor(self):    #关闭电机，同时关闭刹车
@@ -266,10 +234,20 @@ class ControlDriver(Thread):
             read_byte_r += self.ser_r.read(27)
 
     def run(self):
-        self.control_part()
+        if self.position_mode:
+            self.control_part_positionmode()
+        else:
+            self.control_part_speedmode()
+
     pass
 
 
 if __name__ == '__main__':
-    cd = ControlDriver()
+    cd = ControlDriver(V=0, OMEGA=0.01, record_mode=False)
     cd.start()
+    while True:
+        new_V = input('New speed: ')
+        new_OMEGA = input('New OMEGA: ')
+        cd.speed = new_V
+        cd.omega = new_OMEGA
+        time.sleep(0.1)

@@ -29,23 +29,23 @@ import time
 from threading import Thread
 
 # 在这根据运行环境是Win还是Linux判断需要用的文件是 DigitalServoDriver_linux和DigitalServoDriver
-import DigitalDriver.DigitalServoDriver_linux as DsD
+import DigitalDriver.DigitalServoDriver as DsD
 import serial
 import math
 
 
-def singleton(cls, *args, **kw):
-    instances = {}
-
-    def _singleton():
-        if cls not in instances:
-            instances[cls] = cls(*args, **kw)
-        return instances[cls]
-
-    return _singleton
-
-
-@singleton
+# def singleton(cls, *args, **kw):
+#     instances = {}
+#
+#     def _singleton():
+#         if cls not in instances:
+#             instances[cls] = cls(*args, **kw)
+#         return instances[cls]
+#
+#     return _singleton
+#
+#
+# @singleton
 class ControlDriver(Thread):
 
     def __init__(self, radius_wheel=85.00, flag_end=0, radius=0, left_right=0):
