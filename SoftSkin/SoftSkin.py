@@ -130,7 +130,7 @@ class SoftSkin(object):
         self.right_skin = False
         pass
 
-    def basical_control(self, control_driver, setup=(0.5, 0.4, 56 / 2),sit_mode = False):
+    def basical_control(self, control_driver, setup=(1, 0.4, 56 / 2),sit_mode = False):
         """
         根据soft skin被按下的状态，将控制分解为，前行，后退，左转，右转
         前行：

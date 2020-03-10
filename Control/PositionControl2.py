@@ -65,11 +65,10 @@ class PositionControl2(object):
         正无穷      r ->2r        r           r/2
         :return:
         """
-        print("top_decision_started!!!!!!!")
         abs_theta = abs(self.expect_theta)
         # 停止状态
-        if abs_theta == 0 and abs(self.expect_x) <= 0.1:
-            self.clear_driver(0.1, 20000, control_driver)
+        if abs_theta == 0 and self.expect_x == 0:
+            self.clear_driver(0.2, 20000, control_driver)
             print("Action mode: Stop!!!\n")
             return
         # 直行状态
@@ -136,6 +135,8 @@ class PositionControl2(object):
                 self.speed = self.speed - speed_step
                 self.set_driver(control_driver, stop_time / step)
             self.speed = 0
+        else:
+            time.sleep(0.2)
             return
 
     # 插值，主要用于直行的前进和后退改变，直行到转弯的改变，转弯到转弯的改变，
@@ -193,7 +194,7 @@ class PositionControl2(object):
             # 直接变成新的转弯
             self.design_radius()
             self.omega = value
-            self.set_driver(control_driver, 0.2)
+            self.set_driver(control_driver, 0.1)
             pass
         return
 
@@ -201,37 +202,35 @@ class PositionControl2(object):
     def action_forward_back(self, control_driver):
         # 转弯变直行
         speed_default = 0.2
+        time_change_default = 0.1
+        step_numbers_default = 50000
         if self.omega != 0:
             if self.expect_x < 0:
                 print("Action mode: Turn2Backward\n")
-                self.interpolation("Turn2Straight", 0.1, 20000, -speed_default, control_driver)
+                self.interpolation("Turn2Straight", time_change_default, step_numbers_default, -speed_default, control_driver)
             else:
                 print("Action mode: Turn2Forward\n")
-                self.interpolation("Turn2Straight", 0.1, 20000, speed_default, control_driver)
+                self.interpolation("Turn2Straight", time_change_default, step_numbers_default, speed_default, control_driver)
         # 后退
         elif self.expect_x < 0:
             if self.speed == 0:
                 print("Action mode: Start Backward\n")
-                self.start_driver("Straight", 0.1, 20000, -speed_default, control_driver)
-                # self.set_driver(control_driver, 0.2)
+                self.start_driver("Straight", time_change_default, step_numbers_default, -speed_default, control_driver)
             elif self.speed > 0:
                 print("Action mode: Forward2Backward\n")
-                self.interpolation("Straight", 0.1, 20000, -speed_default, control_driver)
+                self.interpolation("Straight", time_change_default, step_numbers_default, -speed_default, control_driver)
             elif self.speed < 0:
                 print("Action mode: Moving Backward\n")
-                # self.set_driver(control_driver, 0.4)
         # 直行
         elif self.expect_x > 0:
             if self.speed == 0:
                 print("Action mode: Start Forward\n")
-                self.start_driver("Straight", 0.1, 20000, speed_default, control_driver)
-                # self.set_driver(control_driver, 0.2)
+                self.start_driver("Straight", time_change_default, step_numbers_default, speed_default, control_driver)
             elif self.speed < 0:
                 print("Action mode: Backward2Forward\n")
-                self.interpolation("Straight", 0.1, 20000, speed_default, control_driver)
+                self.interpolation("Straight", time_change_default, step_numbers_default, speed_default, control_driver)
             elif self.speed > 0:
                 print("Action mode: Moving Forward\n")
-                # self.set_driver(control_driver, 0.4)
         pass
 
     # 旋转
@@ -242,25 +241,25 @@ class PositionControl2(object):
     def action_forward_and_turning(self, control_driver):
         # 直行状态转转弯
         omega_default = 0.2
+        time_change_default = 0.1
+        step_numbers_default = 2500
         if self.speed != 0:
             self.design_radius()
             if self.expect_theta < 0:
                 print("Action mode: Straight2Turn_R\n")
-                self.interpolation("Straight2Turn", 0.1, 20000, -omega_default, control_driver)
+                self.interpolation("Straight2Turn", time_change_default, step_numbers_default, -omega_default, control_driver)
             else:
                 print("Action mode: Straight2Turn_L\n")
-                self.interpolation("Straight2Turn", 0.1, 20000, omega_default, control_driver)
+                self.interpolation("Straight2Turn", time_change_default, step_numbers_default, omega_default, control_driver)
         # 起步转弯
         elif self.omega == 0:
             self.design_radius()
             if self.expect_theta < 0:
                 print("Action mode: Start Turning_R\n")
-                self.start_driver("Turn", 0.1, 20000, -omega_default, control_driver)
-                # time.sleep(0.2)
+                self.start_driver("Turn", time_change_default, step_numbers_default, -omega_default, control_driver)
             else:
                 print("Action mode: Start Turning_L\n")
-                self.start_driver("Turn", 0.1, 20000, omega_default, control_driver)
-                # time.sleep(0.2)
+                self.start_driver("Turn", time_change_default, step_numbers_default, omega_default, control_driver)
         # 转弯转转弯
         else:
             abs_theta = abs(self.expect_theta)
@@ -278,13 +277,10 @@ class PositionControl2(object):
             else:
                 if self.expect_theta < 0:
                     print("Action mode: Turn2Turn_R, radius:", temp_radius, "->", self.radius)
-                    self.interpolation("Turn2Turn", 0.1, 10000, -omega_default, control_driver)
-                    # time.sleep(0.2)
+                    self.interpolation("Turn2Turn", time_change_default, step_numbers_default, -omega_default, control_driver)
                 else:
                     print("Action mode: Turn2Turn_L, radius:", temp_radius, "->", self.radius)
-                    self.interpolation("Turn2Turn", 0.1, 10000, omega_default, control_driver)
-                    # time.sleep(0.2)
-                # time.sleep(0.4)
+                    self.interpolation("Turn2Turn", time_change_default, step_numbers_default, omega_default, control_driver)
         print("omega:", self.omega)
         pass
 
