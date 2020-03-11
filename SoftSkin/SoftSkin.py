@@ -22,6 +22,7 @@ import serial.tools.list_ports
 import numpy as np
 import DigitalDriver.ControlDriver as CD
 
+
 def print_serial(port):
     print("---------------[ %s ]---------------" % port.name)
     print("Path: %s" % port.device)
@@ -108,10 +109,13 @@ class SoftSkin(object):
         self.base_data = mean_base_list.tolist()[0]
         self.base_data = list(map(lambda x: int(x) - 1, self.base_data))
         print("base line data: ", self.base_data)
+        pass
 
-    pass
-
-    def normalize_set_group(self):
+    def detect_three_point(self):
+        """
+        检测三个方向的触发
+        :return:
+        """
         self.read_softskin_data(0)
         normalize = np.array(self.raw_data) - np.array(self.base_data)
         # print(normalize)
@@ -130,7 +134,7 @@ class SoftSkin(object):
         self.right_skin = False
         pass
 
-    def basical_control(self, control_driver, setup=(1, 0.4, 56 / 2),sit_mode = False):
+    def basical_control(self, control_driver, setup=(1, 0.4, 56 / 2), sit_mode=False):
         """
         根据soft skin被按下的状态，将控制分解为，前行，后退，左转，右转
         前行：
@@ -174,19 +178,37 @@ class SoftSkin(object):
                 control_driver.speed = 0
                 control_driver.omega = setup[1]
                 control_driver.radius = setup[2]
-        elif not(self.left_skin and self.front_skin and self.right_skin):
+        elif not (self.left_skin and self.front_skin and self.right_skin):
             print("stop")
             control_driver.speed = 0
             control_driver.omega = 0
             control_driver.radius = 0
 
+    def detect_all_point(self):
+        """
+        检测全方向的触发
+        返回列表，值为0,1
+        :return:
+        """
+        self.read_softskin_data(0)
+        normalize = np.array(self.raw_data) - np.array(self.base_data)
+        normalize[normalize < 20] = 0
+        normalize[normalize > 20] = 1
+        return normalize
+
 
 if __name__ == '__main__':
     softskin = SoftSkin()
+    # 如果需要使用sit模式，先将轮机翻转，然后将sit_mode=True
     control_driver = CD.ControlDriver(left_right=1)
     control_driver.start()
     softskin.build_base_line_data()
     while True:
-        softskin.normalize_set_group()
-        softskin.basical_control(control_driver,sit_mode=True)
-        softskin.clear_skin_state()
+        # 移动控制
+        # softskin.detect_three_point()
+        # softskin.basical_control(control_driver, sit_mode=True)
+        # softskin.clear_skin_state()
+
+        # 数据采集
+        data = softskin.detect_all_point()
+        print(data)
