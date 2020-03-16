@@ -63,6 +63,15 @@ class SoftSkin(object):
         self.left_skin = False
         self.front_skin = False
         self.right_skin = False
+
+        self.label_dict = {0: [0, "left_left"],
+                           1: [1, "left_forward"],
+                           2: [2, "left_right"],
+                           10: [10, "right_left"],
+                           11: [11, "right_forward"],
+                           12: [12, "right_right"],
+                           100: "No_data"}
+        self.label = ""
         pass
 
     def read_softskin_data(self, flag_show=1):
@@ -184,7 +193,7 @@ class SoftSkin(object):
             control_driver.omega = 0
             control_driver.radius = 0
 
-    def detect_all_point(self):
+    def detect_all_point(self, power=30):
         """
         检测全方向的触发
         返回列表，值为0,1
@@ -192,9 +201,22 @@ class SoftSkin(object):
         """
         self.read_softskin_data(0)
         normalize = np.array(self.raw_data) - np.array(self.base_data)
-        normalize[normalize < 20] = 0
-        normalize[normalize > 20] = 1
+        normalize[normalize < power] = 0
+        normalize[normalize >= power] = 1
         return normalize
+
+    def label_front_follow(self):
+        self.build_base_line_data()
+        while True:
+            np_data = self.detect_all_point()
+            b = np.arange(len(np_data))
+            # print(b[np_data == 1])
+            if len(b[np_data == 1]) == 1:
+                self.label = self.label_dict[b[np_data == 1][0]][1]
+                # print(self.label)
+            else:
+                self.label = self.label_dict[100]
+                # print(self.label)
 
 
 if __name__ == '__main__':
@@ -202,13 +224,14 @@ if __name__ == '__main__':
     # 如果需要使用sit模式，先将轮机翻转，然后将sit_mode=True
     control_driver = CD.ControlDriver(left_right=1)
     control_driver.start()
-    softskin.build_base_line_data()
-    while True:
-        # 移动控制
-        # softskin.detect_three_point()
-        # softskin.basical_control(control_driver, sit_mode=True)
-        # softskin.clear_skin_state()
-
-        # 数据采集
-        data = softskin.detect_all_point()
-        print(data)
+    # softskin.build_base_line_data()
+    # while True:
+    #     # 移动控制
+    #     # softskin.detect_three_point()
+    #     # softskin.basical_control(control_driver, sit_mode=True)
+    #     # softskin.clear_skin_state()
+    #
+    #     # 数据采集
+    #     data = softskin.detect_all_point()
+    #     print(data)
+    softskin.label_front_follow()

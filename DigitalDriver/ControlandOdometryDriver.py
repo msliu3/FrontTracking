@@ -271,5 +271,5 @@ class ControlDriver(Thread):
 
 
 if __name__ == '__main__':
-    cd = ControlDriver()
+    cd = ControlDriver(record_mode=True)
     cd.start()

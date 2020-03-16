@@ -116,10 +116,10 @@ class DemonProcess(object):
         is_foot = pf.detect_is_foot(temperature)
         if not is_foot:
             return None, None, False
-        result, flag, kmeans_env,foot_RIO = pf.k_means_detect(temperature)
+        result, flag, kmeans_env, foot_RIO = pf.k_means_detect(temperature)
         # print(kmeans_env,foot_RIO)
         fix_temp = np.array(temp_data).reshape(24, 32)
-        fix_temp[4:7, 0:4] = kmeans_env-0.5
+        fix_temp[4:7, 0:4] = kmeans_env - 0.5
         temp_data = list(fix_temp)
 
         temp_data = pf.filter_temperature(temp_data)
@@ -338,13 +338,12 @@ class DemonProcess(object):
                 cv.waitKey(-1)
             return 1
 
-    def start_Demon(self, queue=None):
+    def start_Demon(self, queue=None, record_mode=False):
         head = []
         data = []
         filter_data = []
         rest_num = 5
         ir_data_path = resource + os.path.sep + "ir_data.txt"
-        np_data_path = resource + os.path.sep + "np_data_txt"
         file_ir = open(ir_data_path, "w")
         while True:
             s = self.serial.read(1).hex()
@@ -369,8 +368,9 @@ class DemonProcess(object):
                         # filter is effective
                         time_index = time.time()
                         temp.insert(0, time_index)
-                        file_ir.write(str(temp) + "\n")
-                        # np.savetxt(np_data_path+os.path.sep+time_index+".txt",ir_np)
+                        if record_mode:
+                            # np.savetxt(np_data_path+os.path.sep+time_index+".txt",ir_np)
+                            file_ir.write(str(temp) + "\n")
                         ir_np = pf.image_processing_mean_filter(ir_np, kernel_num=16)
                         # print(self.output_image + os.path.sep + time.strftime("%H:%M:%S", time.localtime()) + ".jpg")
                         # cv.imwrite("../resource/output_npdata/" + time_index + ".jpg", ir_np)
@@ -416,7 +416,6 @@ class DemonProcess(object):
                     head.clear()
                 else:
                     head.pop(0)
-
                 # 将读到的数据进行展示
                 if len(data) == rest_num:
                     temp, ir_np, foot_flag = self.demonstrate_data(data[rest_num - 1], filter_data,
