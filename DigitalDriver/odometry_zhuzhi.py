@@ -39,6 +39,7 @@ class Odometry:
 
         # 计算转弯半径 R
         if self.d_theta:
+            # print("odo:",self.d_l,self.d_r)
             if (self.d_l + self.d_r) == 0:  # 原地转向或静止
                 self.Radius = 0
             else:
@@ -49,6 +50,7 @@ class Odometry:
             # print('Turning Radius: ', self.Radius, 'm;')
         else:
             # print('No Turning!')
+            self.Radius = 0
             pass
 
         # 计算坐标变化dX, dY
