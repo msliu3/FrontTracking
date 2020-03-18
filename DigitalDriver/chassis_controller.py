@@ -1,11 +1,24 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+import os, sys
+pwd = os.path.abspath(os.path.abspath(__file__))
+father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
+sys.path.append(father_path)
+
 import time
 from threading import Thread
 from DigitalDriver import DigitalServoDriver_linux as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
 from DigitalDriver import odometry_zhuzhi as odo
-import matplotlib.pyplot as plt
 import serial
 import math
+
+import rospy
+import tf
+from std_msgs.msg import Odometry
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
+
 
 class ControlDriver(Thread):
 
@@ -16,8 +29,7 @@ class ControlDriver(Thread):
         :param radius:
         :param left_right:
             如果发现 左右轮数据反了
-            将 0 改为 1
-            或 1 改为 0
+            将 0 改为 1 或 1 改为 0
         """
         Thread.__init__(self)
         self.radius_wheel = 85.00   #车轮半径/mm
@@ -39,20 +51,8 @@ class ControlDriver(Thread):
         self.plot_y = [0.0]
 
         # 初始化时读取一次驱动器监控信息，记录初始时encoder位置
-        # 读取左轮监控信息
-        self.ser_l.write(bytes([0x80, 0x00, 0x80]))
-        read_byte_l = self.ser_l.read(5)
-        if read_byte_l[4] == 0x80:
-            read_byte_l += self.ser_l.read(31)
-        else:
-            read_byte_l += self.ser_l.read(27)
-        # 读取右轮监控信息
-        self.ser_r.write(bytes([0x80, 0x00, 0x80]))
-        read_byte_r = self.ser_r.read(5)
-        if read_byte_r[4] == 0x80:
-            read_byte_r += self.ser_r.read(31)
-        else:
-            read_byte_r += self.ser_r.read(27)
+        read_byte_l = self.read_monitor(self.ser_l)
+        read_byte_r = self.read_monitor(self.ser_r)
 
         # 初始化Odometry
         self.motorStatus_l = self.monitor_l.processData(read_byte_l)
@@ -66,6 +66,15 @@ class ControlDriver(Thread):
         print('-------------------------------------------------------------------------------------------------------')
         self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
         # time.sleep(2)
+
+    def read_monitor(self, ser):
+        ser.write(bytes([0x80, 0x00, 0x80]))
+        read_byte = ser.read(5)
+        if read_byte[4] == 0x80:
+            read_byte += ser.read(31)
+        else:
+            read_byte += ser.read(27)
+        return read_byte
 
     def get_wheel_speed(self):
         # 计算两轮线速度
@@ -120,10 +129,10 @@ class ControlDriver(Thread):
 
         while True:
             vl, vr = self.get_wheel_speed()
-            print("left: ", vl, "; right: ", vr)
+            # print("left: ", vl, "; right: ", vr)
             left = self.get_rpm_byte(-(self.speed2rpm(vl)))
             right = self.get_rpm_byte(self.speed2rpm(vr))
-            print("byte_left: ", left, "byte_right: ", right)
+            # print("byte_left: ", left, "byte_right: ", right)
 
             self.ser_l.write(bytes(left))
             self.ser_l.flush()
@@ -135,22 +144,8 @@ class ControlDriver(Thread):
             try:
                 watch = [0x80, 0x00, 0x80]
                 # 左轮
-                self.ser_l.write(bytes(watch))
-                self.ser_l.flush()
-                read_byte_l = self.ser_l.read(5)
-                if read_byte_l[4] == 0x80:
-                    read_byte_l += self.ser_l.read(31)
-                else:
-                    read_byte_l += self.ser_l.read(27)
-
-                # 右轮
-                self.ser_r.write(bytes(watch))
-                self.ser_r.flush()
-                read_byte_r = self.ser_r.read(5)
-                if read_byte_r[4] == 0x80:
-                    read_byte_r += self.ser_r.read(31)
-                else:
-                    read_byte_r += self.ser_r.read(27)
+                read_byte_l = self.read_monitor(self.ser_l)
+                read_byte_r = self.read_monitor(self.ser_r)
 
                 if self.left_right == 1:
                     self.motorStatus_l = self.monitor_l.processData(read_byte_r)
@@ -241,5 +236,47 @@ class ControlDriver(Thread):
 
 
 if __name__ == '__main__':
-    cd = ControlDriver(V=0, OMEGA=-0.1, record_mode=False)
+
+    cd = ControlDriver(V=0.1, OMEGA=0.0, record_mode=False)
     cd.start()
+
+    rospy.init_node('control_driver_node')
+    r = rospy.Rate(10)
+
+    odom_pub = rospy.Publisher("odom", Odometry, queue_size=10)
+    odom = Odometry()
+    pos_p = cd.position
+    last_time = rospy.Time.now()
+
+    while not rospy.is_shutdown():
+        current_time = rospy.Time.now()
+        dt = current_time - last_time
+        pos = cd.position
+
+        x = pos[1]
+        dx = x - pos_p[1]
+        vx = dx / dt
+        y = -pos[0]
+        dy = y - (-pos_p[0])
+        vy = dy / dt
+        theta = pos[2]
+        dtheta = theta - pos_p[2]
+        vtheta = dtheta / dt
+
+        odom_quat = tf.transformations.quaternion_from_euler(0, 0, theta)
+
+        # publish Odometry over ROS
+        odom.header.stamp = current_time
+        odom.header.frame_id = "odom"
+        # set the position
+        odom.pose.pose = Pose(Point(x, y, 0.), Quaternion(*odom_quat))
+        # set velocity
+        odom.child_frame_id = "base_link"
+        odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
+        # publish the message
+        odom_pub.publish(odom)
+
+        last_time = current_time
+        pos_p = pos
+
+        r.sleep()
