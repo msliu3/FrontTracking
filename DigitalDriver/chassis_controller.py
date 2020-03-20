@@ -15,8 +15,7 @@ import serial
 import math
 
 import rospy
-import tf
-from std_msgs.msg import Odometry
+from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 
 
@@ -40,7 +39,7 @@ class ControlDriver(Thread):
         self.omega = OMEGA  #角速度
         self.position = [0.0, 0.0, 0.0]
         self.count = 0
-        driver = DsD.DigitalServoDriver(left_right=left_right)
+        driver = DsD.DigitalServoDriver()
         self.left_right = left_right
         baud_rate = driver.baud_rate
         self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.05)    #左轮串口
@@ -130,10 +129,9 @@ class ControlDriver(Thread):
         while True:
             vl, vr = self.get_wheel_speed()
             # print("left: ", vl, "; right: ", vr)
-            left = self.get_rpm_byte(-(self.speed2rpm(vl)))
+            left = self.get_rpm_byte(-self.speed2rpm(vl))
             right = self.get_rpm_byte(self.speed2rpm(vr))
             # print("byte_left: ", left, "byte_right: ", right)
-
             self.ser_l.write(bytes(left))
             self.ser_l.flush()
             self.ser_l.read(2)
@@ -142,8 +140,6 @@ class ControlDriver(Thread):
             self.ser_r.read(2)
             time.sleep(0.05)
             try:
-                watch = [0x80, 0x00, 0x80]
-                # 左轮
                 read_byte_l = self.read_monitor(self.ser_l)
                 read_byte_r = self.read_monitor(self.ser_r)
 
@@ -154,14 +150,11 @@ class ControlDriver(Thread):
                     self.motorStatus_l = self.monitor_l.processData(read_byte_l)
                     self.motorStatus_r = self.monitor_r.processData(read_byte_r)
 
-                self.odo.Odo_l = self.motorStatus_l['FeedbackPosition']
-                self.odo.Odo_r = self.motorStatus_r['FeedbackPosition']
-
-                # print('LEFT monitor: ', self.motorStatus_l)
-                # print('RIGHT monitor:', self.motorStatus_r)
+                Odo_l = self.motorStatus_l['FeedbackPosition']
+                Odo_r = self.motorStatus_r['FeedbackPosition']
 
                 # 更新位置
-                self.position = self.odo.updatePose(-self.odo.Odo_l, self.odo.Odo_r)
+                self.position = self.odo.updatePose(-Odo_l, Odo_r)
                 # print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm; THETA=', self.position[2] / math.pi * 180, '°;')
 
                 if math.sqrt((self.position[0] - self.plot_x[-1]) ** 2 + (self.position[1] - self.plot_y[-1]) ** 2) > 0.1:
@@ -209,22 +202,8 @@ class ControlDriver(Thread):
         self.ser_r.read(2)
 
         # 读取一帧驱动器监控信息
-        watch = [0x80, 0x00, 0x80]
-        # 左轮
-        self.ser_l.write(bytes(watch))
-        read_byte_l = self.ser_l.read(5)
-        if read_byte_l[4] == 0x80:
-            read_byte_l += self.ser_l.read(31)
-        else:
-            read_byte_l += self.ser_l.read(27)
-
-        # 右轮
-        self.ser_r.write(bytes(watch))
-        read_byte_r = self.ser_r.read(5)
-        if read_byte_r[4] == 0x80:
-            read_byte_r += self.ser_r.read(31)
-        else:
-            read_byte_r += self.ser_r.read(27)
+        read_byte_l = self.read_monitor(self.ser_l)
+        read_byte_r = self.read_monitor(self.ser_r)
 
     def run(self):
         if self.position_mode:
@@ -237,8 +216,13 @@ class ControlDriver(Thread):
 
 if __name__ == '__main__':
 
-    cd = ControlDriver(V=0.1, OMEGA=0.0, record_mode=False)
+    cd = ControlDriver(V=0.0, OMEGA=0.0, left_right=0, record_mode=True)
     cd.start()
+
+    # while True:
+    #     time.sleep(0.5)
+    #     (x, y, theta) = cd.odo.getROS_XYTHETA()
+    #     print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
 
     rospy.init_node('control_driver_node')
     r = rospy.Rate(10)
@@ -255,24 +239,27 @@ if __name__ == '__main__':
 
         x = pos[1]
         dx = x - pos_p[1]
-        vx = dx / dt
+        vx = dx / 0.1
         y = -pos[0]
         dy = y - (-pos_p[0])
-        vy = dy / dt
+        vy = dy / 0.1
         theta = pos[2]
         dtheta = theta - pos_p[2]
-        vtheta = dtheta / dt
-
-        odom_quat = tf.transformations.quaternion_from_euler(0, 0, theta)
-
+        vtheta = dtheta / 0.1
+        print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
+        # theta euler -> quaternion
+        odom_quat = Quaternion()
+        odom_quat.w = math.cos(0.5*theta)
+        odom_quat.z = math.sin(0.5*theta)
         # publish Odometry over ROS
         odom.header.stamp = current_time
         odom.header.frame_id = "odom"
         # set the position
-        odom.pose.pose = Pose(Point(x, y, 0.), Quaternion(*odom_quat))
+        odom.pose.pose = Pose(Point(x, y, 0.), odom_quat)
         # set velocity
         odom.child_frame_id = "base_link"
         odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
+
         # publish the message
         odom_pub.publish(odom)
 

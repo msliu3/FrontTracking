@@ -10,7 +10,7 @@
 
 @Description
 ------------
-这是一个包含odoemtary和control的数字伺服器控制器
+这是一个包含odoemtry和control的数字伺服器控制器
 
 接受一个线速度v和角速度w，旋转半径r
 
@@ -28,6 +28,8 @@ import serial
 import math
 
 
+
+
 # def singleton(cls, *args, **kw):
 #     instances = {}
 #
@@ -40,6 +42,7 @@ import math
 #
 #
 # @singleton
+
 class ControlDriver(Thread):
 
     def __init__(self, radius_wheel=85.00, record_mode=False, radius=0, left_right=0):
@@ -271,5 +274,6 @@ class ControlDriver(Thread):
 
 
 if __name__ == '__main__':
+
     cd = ControlDriver(record_mode=True)
     cd.start()

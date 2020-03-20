@@ -5,7 +5,7 @@
 
   <!-- 启动雷达（这里用的是rplidar A1） -->
   <node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode" output="screen">
-        <param name="serial_port"         type="string" value="/dev/ttyUSB2"/>
+        <param name="serial_port"         type="string" value="/dev/ttyUSB0"/>
         <param name="serial_baudrate"     type="int"    value="115200"/><!--A1/A2 -->
         <!--param name="serial_baudrate"     type="int"    value="256000"--><!--A3 -->
         <param name="frame_id"            type="string" value="laser"/>
@@ -44,9 +44,9 @@
 
   <node pkg="rviz" type="rviz" name="rviz"/>
 
-<!--   <node pkg="neo_front_following" type="Odom_node.py" name="odom_node" output="screen"></node> -->
+<!--   <node pkg="neo_front_following" type="chassis_controller.py" name="control_driver_node"></node> -->
 
-  <node pkg="neo_front_following" type="chassis_controller.py" name="control_driver_node"></node>
+<!--   <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"></node> -->
 
 </launch>
  

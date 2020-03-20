@@ -16,25 +16,131 @@ def loop(pc, control, flag):
 
 def loop2(control, pc):
 
-    time_snap = 0.5
+    time_snap = 0.8
+    pc.set_expect(0, 0)
+    time.sleep(6)
+
+    # print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    # pc.set_expect(1, 0)
+    # # while True:
+    # #     if pc.speed == 0.2:
+    # #         print(time.time())
+    # #         break
+    # time.sleep(time_snap)
+    #
+    #
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, 0)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, 0)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, 0)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, 45)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, 45)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, 88)
+    time.sleep(time_snap)
+
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, 88)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, -89)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, -89)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, -45)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, -45)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, -45)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, -45)
+    time.sleep(time_snap)
+
+    #
+    #
+    #
+    # print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    # pc.set_expect(1, -30)
+    # time.sleep(time_snap)
+    #
+    # print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    # pc.set_expect(1, -40)
+    # time.sleep(time_snap)
+    #
+    # print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    # pc.set_expect(1, -50)
+    # time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, 0)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(1, 0)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(-1, 0)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(-1, 0)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(-1, 0)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(-1, 0)
+    time.sleep(time_snap)
+
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
+    pc.set_expect(-1, 0)
+    time.sleep(time_snap)
+
     print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
     pc.set_expect(0, 0)
     time.sleep(time_snap)
+    # while True:
+    #     if pc.speed == 0:
+    #         print(time.time())
+    #         break
+    # time.sleep(time_snap)
 
-    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
-    pc.set_expect(1, 1)
-    time.sleep(time_snap)
-
-    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
-    pc.set_expect(0, 0)
-    time.sleep(time_snap)
-
-    os._exit(1)
     # pc.set_expect(-1, 0)
-    # time.sleep(2)
+    # time.sleep(5)
     #
     # pc.set_expect(0, 0)
     # time.sleep(2)
+    time.sleep(0.1)
+    print("speed:", pc.speed, "omega:", pc.omega, "radius", pc.radius, "time:", time.time())
 
 
 def loop_1(control, pc, bf, turn):

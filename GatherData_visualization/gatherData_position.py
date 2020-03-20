@@ -19,9 +19,9 @@ import time
 pwd = os.path.abspath(os.path.abspath(__file__))
 father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
 sys.path.append(father_path)
-import threading
 
-# import FootDetector.DemonstrationProcess as DP
+
+import FootDetector.DemonstrationProcess as DP
 import LegDetector.LegInformation as LegLidar
 import DigitalDriver.ControlandOdometryDriver as CD
 import SoftSkin.SoftSkin as SS
@@ -39,7 +39,7 @@ def loop(event):
 
 
 if __name__ == '__main__':
-    # pd = DP.DemonProcess()
+    pd = DP.DemonProcess()
     cd = CD.ControlDriver(record_mode=True)
     ss = SS.SoftSkin()
     # IMU = imu.ArduinoRead()
@@ -47,8 +47,8 @@ if __name__ == '__main__':
     # thread_imu = threading.Thread(target=IMU.reading_data_from_arduino, args=())
     # thread_imu.start()
     event = threading.Event()
-    # thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(None, True))
-    # thread_ir.start()
+    thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(None, True))
+    thread_ir.start()
     thread_soft_skin = threading.Thread(target=ss.label_front_follow, args=())
     thread_soft_skin.start()
     thread_control_driver = threading.Thread(target=cd.control_part, args=())

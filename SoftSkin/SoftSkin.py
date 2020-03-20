@@ -64,9 +64,9 @@ class SoftSkin(object):
         self.front_skin = False
         self.right_skin = False
 
-        self.label_dict = {0: [0, "left_left"],
+        self.label_dict = {0: [0, "left_right"],
                            1: [1, "left_forward"],
-                           2: [2, "left_right"],
+                           2: [2, "left_left"],
                            10: [10, "right_left"],
                            11: [11, "right_forward"],
                            12: [12, "right_right"],
