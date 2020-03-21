@@ -39,6 +39,7 @@ class ControlDriver(Thread):
         self.omega = OMEGA  #角速度
         self.position = [0.0, 0.0, 0.0]
         self.count = 0
+        self.is_stopped = record_mode
         driver = DsD.DigitalServoDriver()
         self.left_right = left_right
         baud_rate = driver.baud_rate
@@ -115,21 +116,12 @@ class ControlDriver(Thread):
 
     def control_part_speedmode(self):
         print("\n===================================== Start speed control ! =====================================")
-        start = [0x00, 0x00, 0x01, 0x01]
-        pc_mode = [0x02, 0x00, 0xc4, 0xc6]
         end = [0x00, 0x00, 0x00, 0x00]
-        self.ser_l.write(bytes(start))
-        self.ser_l.read(2)
-        self.ser_r.write(bytes(start))
-        self.ser_r.read(2)
-        self.ser_l.write(bytes(pc_mode))
-        self.ser_l.read(2)
-        self.ser_r.write(bytes(pc_mode))
-        self.ser_r.read(2)
+        self.start_motor()
 
         # 如果 record_mode 是 True，则停掉电机，只记录数据
         if self.record_mode:
-            self.stopMotor()
+            self.stop_motor()
 
         while True:
             vl, vr = self.get_wheel_speed()
@@ -199,7 +191,20 @@ class ControlDriver(Thread):
         self.ser_r.read(2)
         pass
 
-    def stopMotor(self):    #关闭电机，同时关闭刹车
+    def start_motor(self):
+        start = [0x00, 0x00, 0x01, 0x01]
+        pc_mode = [0x02, 0x00, 0xc4, 0xc6]
+        self.ser_l.write(bytes(start))
+        self.ser_l.read(2)
+        self.ser_r.write(bytes(start))
+        self.ser_r.read(2)
+        self.ser_l.write(bytes(pc_mode))
+        self.ser_l.read(2)
+        self.ser_r.write(bytes(pc_mode))
+        self.ser_r.read(2)
+        self.is_stopped = False
+
+    def stop_motor(self):    #关闭电机，同时关闭刹车
         end = [0x00, 0x00, 0x00, 0x00]
         self.ser_l.write(bytes(end))
         self.ser_l.read(2)
@@ -210,6 +215,8 @@ class ControlDriver(Thread):
         read_byte_l = self.read_monitor(self.ser_l)
         read_byte_r = self.read_monitor(self.ser_r)
 
+        self.is_stopped = True
+
     def run(self):
         if self.position_mode:
             self.control_part_positionmode()
@@ -219,8 +226,12 @@ class ControlDriver(Thread):
     pass
 
 def callback_vel(vel, cd):
+    # callback function to change the speed when receives /cmd_vel topic
     speed = vel.linear.x
     omega = vel.angular.z
+    # if velocity command is not zero and motors are stopped, start it
+    if cd.is_stopped and (speed+omega!=0):
+        cd.start_motor()
     cd.change_speed(speed, omega)
     pass
 
@@ -237,27 +248,29 @@ if __name__ == '__main__':
     rospy.init_node('control_driver_node')
     r = rospy.Rate(10)
     # the velocity command subscriber subscribes to "/cmd_vel" topic
-    vel_sub = rospy.Subscriber("cmd_vel", Twist, callback_vel(), cd)
+    vel_sub = rospy.Subscriber("cmd_vel", Twist, callback_vel, cd)
     # the odometry publisher publish topic "/odom"
     odom_pub = rospy.Publisher("odom", Odometry, queue_size=10)
     odom = Odometry()
-    pos_p = cd.position
+    pos_p = cd.odo.getROS_XYTHETA()
     last_time = rospy.Time.now()
 
     while not rospy.is_shutdown():
         current_time = rospy.Time.now()
         dt = current_time - last_time
-        pos = cd.position
+        # dt is a Duration() class, convert to float
+        dt = dt.to_sec()
+        pos = cd.odo.getROS_XYTHETA()
 
-        x = pos[1]
-        dx = x - pos_p[1]
-        vx = dx / 0.1
-        y = -pos[0]
-        dy = y - (-pos_p[0])
-        vy = dy / 0.1
+        x = pos[0]
+        dx = x - pos_p[0]
+        vx = dx / dt
+        y = pos[1]
+        dy = y - pos_p[1]
+        vy = dy / dt
         theta = pos[2]
         dtheta = theta - pos_p[2]
-        vtheta = dtheta / 0.1
+        vtheta = dtheta / dt
         print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
         # theta euler -> quaternion
         odom_quat = Quaternion()
@@ -271,7 +284,6 @@ if __name__ == '__main__':
         # set velocity
         odom.child_frame_id = "base_link"
         odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
-
         # publish the message
         odom_pub.publish(odom)
 
