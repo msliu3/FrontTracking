@@ -1,0 +1,31 @@
+<!-- xml form -->
+<launch>
+  ##################### set up data playback from bag ####################
+  <param name="/use_sim_time" value="false"/>
+
+  <!-- 启动雷达（这里用的是rplidar A1） -->
+  <node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode" output="screen">
+        <param name="serial_port"         type="string" value="/dev/ttyUSB1"/>
+        <param name="serial_baudrate"     type="int"    value="115200"/><!--A1/A2 -->
+        <!--param name="serial_baudrate"     type="int"    value="256000"--><!--A3 -->
+        <param name="frame_id"            type="string" value="laser"/>
+        <param name="inverted"            type="bool"   value="false"/>
+        <param name="angle_compensate"    type="bool"   value="true"/>
+  </node>
+  <!--启动tf变换，转换/scan话题的frame与odom_combine（在leg_detector中使用到）-->
+  <!--启动tf变换，转换/scan话题的laser与odom_combine（在leg_detector中使用到）-->  
+  <node pkg="tf" type="static_transform_publisher" name="base_laser_link" 
+      args="0.46 0 0.36 0 0 0 1  /base_link /laser 100"/>
+
+  <node pkg="neo_front_following" type="neo_remarker.py" name="neo_remarker_node"></node>
+
+  <node pkg="rviz" type="rviz" name="rviz"/>
+
+  <node pkg="neo_front_following" type="chassis_controller.py" name="control_driver_node"></node>
+
+  <node pkg="neo_front_following" type="vel_publisher.py" name="vel_cmd_node"></node>
+
+  <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"></node>
+
+</launch>
+ 
