@@ -75,6 +75,11 @@ class ControlDriver(Thread):
             read_byte += ser.read(27)
         return read_byte
 
+    def change_speed(self, v, omega):
+        self.speed = v
+        self.omega = omega
+        time.sleep(0.05)
+
     def get_wheel_speed(self):
         # 计算两轮线速度
         # v_r = (2V + omega * wheelbase) / 2*wheel_radius
@@ -213,6 +218,11 @@ class ControlDriver(Thread):
 
     pass
 
+def callback_vel(vel, cd):
+    speed = vel.linear.x
+    omega = vel.angular.z
+    cd.change_speed(speed, omega)
+    pass
 
 if __name__ == '__main__':
 
@@ -226,7 +236,9 @@ if __name__ == '__main__':
 
     rospy.init_node('control_driver_node')
     r = rospy.Rate(10)
-
+    # the velocity command subscriber subscribes to "/cmd_vel" topic
+    vel_sub = rospy.Subscriber("cmd_vel", Twist, callback_vel(), cd)
+    # the odometry publisher publish topic "/odom"
     odom_pub = rospy.Publisher("odom", Odometry, queue_size=10)
     odom = Odometry()
     pos_p = cd.position
