@@ -80,7 +80,7 @@ if __name__ == '__main__':
     leg = LegLidar.LegInformation()
     thread_start = threading.Thread(target=leg.loop, args=())
     thread_ir = multiprocessing.Process(target=pd.start_Demon_for_DL, args=(queue,))
-    deep = DL.DeepLearningDetectCase(model_name="dnn8.ckpt")
+    deep = DL.DeepLearningDetectCase(model_name="dnn1.ckpt")
     p2 = threading.Thread(target=loop2, args=(deep, queue, leg))
     thread_start.start()
 
