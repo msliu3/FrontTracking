@@ -28,7 +28,7 @@ print("(Deep Learning class)father path:", father_path)
 
 
 class DeepLearningDetectCase(object):
-    def __init__(self, model_name, class_num=4, sample_num=10, strides=1):
+    def __init__(self, model_name, class_num=6, sample_num=1, strides=1):
         # 分类数量 3 或 4，看包不包含原地不动的情况
         self.class_num = class_num
         # sample的数量：连续几帧作为一个输入
@@ -60,11 +60,17 @@ class DeepLearningDetectCase(object):
         self.fc3_biases = tf.get_variable('f3_biases', shape=[self.class_num], dtype=tf.float32)
 
         # 构建模型并且把结果保存在predict_result中
-        self.predict_result,self.logits = self.build_mode()
+        self.predict_result, self.logits = self.build_mode()
         self.sess = tf.Session()
         saver = tf.train.Saver()
         print(self.model_path)
         saver.restore(self.sess, self.model_path)
+        self.dict_class = {0: "left_left",
+                           1: "left_forward",
+                           2: "left_right",
+                           3: "right_left",
+                           4: "right_forward",
+                           5: "right_right"}
         pass
 
     def build_mode(self):
@@ -75,10 +81,10 @@ class DeepLearningDetectCase(object):
         net = tf.add(tf.matmul(net, self.fc3_weights), self.fc3_biases)
         logits = tf.nn.softmax(net)
         classes = tf.cast(tf.argmax(logits, axis=1), dtype=tf.int32)
-        return classes,logits
+        return classes, logits
 
     def obtain_input(self, ir_data_sample, leg_sample):
-        np_size_32 = np.ones(32 * 24).reshape([ 32 * 24,1])
+        np_size_32 = np.ones(32 * 24).reshape([32 * 24, 1])
         max_colum = ir_data_sample.max(axis=1).reshape([ir_data_sample.shape[0], 1])
         max_value = max_colum.max()
         min_colum = ir_data_sample.min(axis=1).reshape([ir_data_sample.shape[0], 1])
@@ -98,16 +104,8 @@ class DeepLearningDetectCase(object):
         return {self.inputs: input_data.reshape([1, 24 * 32 + 4, self.sample_num])}
 
     def print_predict_result(self, ir_data_sample, leg_sample):
-        result_ ,logits_= self.sess.run([self.predict_result,self.logits], feed_dict=self.obtain_input(ir_data_sample, leg_sample))
-        if result_ == 0:
-            print("-----------------still--------------")
-            print(logits_)
-        elif result_ == 1:
-            print("-----------------forward--------------")
-            print(logits_)
-        elif result_ == 2:
-            print("-----------------right--------------")
-            print(logits_)
-        elif result_ == 3:
-            print("-----------------left--------------")
-            print(logits_)
+        result_, logits_ = self.sess.run([self.predict_result, self.logits],
+                                         feed_dict=self.obtain_input(ir_data_sample, leg_sample))
+
+        print("--------------", self.dict_class[int(result_)], "--------------------")
+
