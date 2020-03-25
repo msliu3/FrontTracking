@@ -259,7 +259,7 @@ if __name__ == '__main__':
     #     (x, y, theta) = cd.odo.getROS_XYTHETA()
     #     print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
 
-    rospy.init_node('control_driver_node')
+    rospy.init_node('base_controller_node')
     r = rospy.Rate(10)
     # the velocity command subscriber subscribes to "/cmd_vel" topic
     vel_sub = rospy.Subscriber("cmd_vel", Twist, callback_vel, cd)

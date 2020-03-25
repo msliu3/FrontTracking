@@ -21,7 +21,7 @@
 
   <node pkg="rviz" type="rviz" name="rviz"/>
 
-  <node pkg="neo_front_following" type="chassis_controller.py" name="control_driver_node"></node>
+  <node pkg="neo_front_following" type="chassis_controller.py" name="base_controller_node"></node>
 
   <node pkg="neo_front_following" type="vel_publisher.py" name="vel_cmd_node"></node>
 

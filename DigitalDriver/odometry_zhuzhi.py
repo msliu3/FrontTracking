@@ -54,7 +54,6 @@ class Odometry:
             pass
 
         # 计算坐标变化dX, dY
-
         if self.d_l == self.d_r:  # 直行
             self.dx = 0.0
             self.dy = self.d_l
@@ -97,6 +96,7 @@ class Odometry:
 
 
 if __name__ == "__main__":
-    odo = Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0)
-    newPos = odo.updatePose(4096, 0)
-    print('X:', newPos[0], 'm;   Y:', newPos[1], 'm;   THETA:', newPos[2] / math.pi * 180, '°;')
+    # odo = Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0)
+    # newPos = odo.updatePose(4096, 0)
+    # print('X:', newPos[0], 'm;   Y:', newPos[1], 'm;   THETA:', newPos[2] / math.pi * 180, '°;')
+    pass
