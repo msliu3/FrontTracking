@@ -32,7 +32,13 @@ class MatchCase(object):
         # 因为footinformation不是已独立存在的类，所以这里选用传入的方式
         # self.foot = FootInformation.FootInformation()
         self.foot = FootInformation.FootInformation()
-        self.NN = DeepLearning.DeepLearningDetectCase()
+        # self.NN = DeepLearning.DeepLearningDetectCase()
+        self.dict_class = {0: "left_left",
+                           1: "left_forward",
+                           2: "left_right",
+                           3: "right_left",
+                           4: "right_forward",
+                           5: "right_right"}
         """
         下面是我需要得到的东西，期望的x和theta
         """
@@ -70,7 +76,7 @@ class MatchCase(object):
 
         pass
 
-    def detect_case(self, input_data):
+    def detect_case(self, nn_result):
         """
         判断人是不是在原地
         以两个轮子连线的中点为基准线
@@ -102,21 +108,13 @@ class MatchCase(object):
                 self.go_back_or_forward(front_x)
                 return self.expect_x, self.expect_theta
             elif front_x > 0.05:
-                if self.foot.left_line != 0:
-                    print("turing and forward:", self.front)
-                    self.turning = True
-                    self.go_turning_and_forward()
-                    # print("---------------------------------------------")
-                    # print(self.expect_theta)
-                    # print("---------------------------------------------")
-                    return self.expect_x, self.expect_theta
-                else:
-                    self.forward = True
-                    self.go_back_or_forward(front_x)
-                    print("forward")
-                    self.state = "forward"
-                    return self.expect_x, self.expect_theta
-        # 总是能分出前后脚的所以不需要判断两脚并一块的情况
+                if nn_result == 1 or nn_result == 4:
+                    return front_x, 0
+                elif nn_result == 2 or nn_result == 3:
+                    return front_x, -90 if nn_result == 2 else 90
+                elif nn_result == 0 or nn_result == 5:
+                    return front_x, 45 if nn_result == 0 else -45
+                    # 总是能分出前后脚的所以不需要判断两脚并一块的情况
         # else:
         # print("No result:not_dis:",self.not_distinguish," front:",self.front)
         return 0, 0
