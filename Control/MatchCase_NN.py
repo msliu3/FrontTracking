@@ -87,7 +87,7 @@ class MatchCase(object):
         """
         self.clear_case()
         # print("foot information", self.foot.left_line, self.foot.right_line)
-        # print("Leg Information :",self.leg.left_leg_x,self.leg.right_leg_x)
+        # print("Leg Information :", self.leg.left_leg_x, self.leg.right_leg_x)
         if self.front == "left":
             front_x = self.leg.left_leg_x
         else:
@@ -95,7 +95,7 @@ class MatchCase(object):
 
         if self.front != "":
 
-            # print(front_x)
+            # print(front_x, self.front)
             if -0.15 < front_x < 0.05:
                 self.rotate = True
                 print("rotate_front")

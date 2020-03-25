@@ -34,44 +34,41 @@ import LegDetector.LegInformation as LegLidar
 import multiprocessing
 
 
-def control_loop(position_control, control_driver, flag):
+def control_loop(position_control, control_driver, flag, event):
     while True:
+        event.wait()
         position_control.top_decision(control_driver)
+        event.clear()
         if flag == 0:
             position_control.set_expect(0, 0)
             break
 
 
-def loop2(deep, queue, matcher, pc):
-    sum = 0
-    ir_data = []
-    lidar_data = []
+def loop2(deep, queue, matcher, pc, event):
     while True:
-        time.sleep(0.3)
-        while len(ir_data) <= deep.sample_num:
+        time.sleep(0.05)
+        result = 1
+        if not queue.empty():
+            # print("into queue")
+            # matcher.clear_foot_and_leg()
+            temps = queue.get(block=False)
+            # print("leg:", matcher.leg.left_leg_x, matcher.leg.left_leg_y, matcher.leg.right_leg_x,
+            #       matcher.leg.right_leg_y)
+            leg_temp = np.array([matcher.leg.left_leg_x, matcher.leg.left_leg_y, matcher.leg.right_leg_x,
+                                 matcher.leg.right_leg_y]).reshape([1, 4])
 
-            if len(ir_data) == deep.sample_num:
-                ir_data.pop(0)
-                lidar_data.pop(0)
-            if not queue.empty():
-                # print("into queue")
-                temps = queue.get(block=False)
-                ir_data.append(np.array(temps).reshape([1, 24 * 32]))
-                # print("leg:", leg.left_leg_x, leg.left_leg_y, leg.right_leg_x, leg.right_leg_y)
-                leg_temp = np.array([matcher.leg.left_leg_x, matcher.leg.left_leg_y, matcher.leg.right_leg_x,
-                                     matcher.leg.right_leg_y]).reshape([1, 4])
-                lidar_data.append(leg_temp)
-            if len(ir_data) == deep.sample_num:
-                break
-        ir_np = np.array(ir_data).reshape([32 * 24, deep.sample_num])
-        leg_np = np.array(lidar_data).reshape([4, deep.sample_num])
-        sum += 1
-        # print(leg_np[0])
-        # print("times: ",sum)
-        result = deep.print_predict_result(ir_np, leg_np)
-        matcher.detect_front_and_back_foot()
-        x, theta = matcher.detect_case(result)
-        pc.set_expect(x, theta)
+            ir_np = np.array(temps).reshape([32 * 24, deep.sample_num])
+            leg_np = np.array(leg_temp).reshape([4, deep.sample_num])
+            # print(leg_np[0])
+            # print("times: ",sum)
+            result = deep.print_predict_result(ir_np, leg_np)
+            matcher.detect_front_and_back_foot()
+            x, theta = matcher.detect_case(result)
+            print(x, theta)
+            pc.set_expect(x, theta)
+            event.set()
+            matcher.clear_expect()
+        # matcher.clear_foot_and_leg()
 
 
 if __name__ == '__main__':
@@ -80,17 +77,17 @@ if __name__ == '__main__':
     pd = DP.DemonProcess()
     matcher = MC.MatchCase(foot=pd.foot)
     position_control = PC.PositionControl2()
+    event = threading.Event()
     nn_model = DL.DeepLearningDetectCase(model_name="dnn1.ckpt")
     cd = CD.ControlDriver()
     flag_stop = 1
 
     thread_ir = multiprocessing.Process(target=pd.start_Demon_for_DL, args=(queue,))
     thread_ir.start()
-    p1 = threading.Thread(target=control_loop, args=(position_control, cd, flag_stop))
+    p1 = threading.Thread(target=control_loop, args=(position_control, cd, flag_stop, event))
     p1.start()
-    p2 = threading.Thread(target=loop2, args=(nn_model, queue, matcher, position_control))
+    p2 = threading.Thread(target=loop2, args=(nn_model, queue, matcher, position_control, event))  # nn_model,
     p2.start()
 
     thread_control_driver = threading.Thread(target=cd.control_part, args=())
     thread_control_driver.start()
-

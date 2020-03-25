@@ -97,7 +97,10 @@ class DeepLearningDetectCase(object):
         # legs_position normalization
         max_leg = leg_sample.max(axis=0)
         min_leg = leg_sample.min(axis=0)
-        max_minus_min = max_leg - min_leg
+        if max_leg == min_leg:
+            max_minus_min = 1
+        else:
+            max_minus_min = max_leg - min_leg
         normal_leg = (leg_sample - min_leg) / max_minus_min
 
         input_data = np.r_[normal_ir, normal_leg]
