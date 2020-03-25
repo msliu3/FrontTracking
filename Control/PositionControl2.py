@@ -69,15 +69,17 @@ class PositionControl2(object):
         # 停止状态
         if abs_theta == 0 and self.expect_x == 0:
             self.clear_driver(0.2, 20000, control_driver)
-            print("Action mode: Stop!!!\n")
+            # print("Action mode: Stop!!!\n")
             return
         # 直行状态
         elif abs_theta <= 25:
             self.action_forward_back(control_driver)
+            print("Action mode: Straight!!!\n")
             return
         # 前进转弯
         elif abs_theta <= 55 or 85 < abs_theta <= 90:
             self.action_forward_and_turning(control_driver)
+            print("Action mode: Turn!!!\n")
             return
         else:
             return
@@ -95,143 +97,302 @@ class PositionControl2(object):
         control_driver.speed = self.speed
         control_driver.radius = self.radius
         control_driver.omega = self.omega
-        time.sleep(times)
+        # time.sleep(times)
         return
 
     # 起步动作, 用插值，总用时start_time, 分step步, 最终speed为value
     def start_driver(self, mode, start_time, step, value, control_driver):
         time_step = start_time / step
-        # 转弯的插值
-        if mode == "Turn":
-            self.design_radius()
-            omega_step = value / step
-            for i in range(step):
-                self.omega += omega_step
-                self.set_driver(control_driver, start_time / step)
-        # 直行的插值
-        elif mode == "Straight":
-            speed_step = value / step
-            for i in range(step):
-                self.speed += speed_step
-                self.set_driver(control_driver, start_time / step)
-        else:
-            return
+        version = 2
+        if version == 1:  # for 循环每步赋值
+            # 转弯的插值
+            if mode == "Turn":
+                self.design_radius()
+                omega_step = value / step
+                for i in range(step):
+                    self.omega += omega_step
+                    self.set_driver(control_driver, time_step)
+                self.omega = value
+                self.set_driver(control_driver, 0.1)
+            # 直行的插值
+            elif mode == "Straight":
+                speed_step = value / step
+                for i in range(step):
+                    self.speed += speed_step
+                    self.set_driver(control_driver, time_step)
+                self.speed = value
+                self.set_driver(control_driver, 0.1)
+        elif version == 2:  # 分大阶梯赋值
+            # 转弯的插值
+            if mode == "Turn":
+                self.design_radius()
+                omega_step = value / step
+                long_step_ratio = 1/1000
+                count = 0
+                for i in range(step):
+                    count += 1
+                    self.omega += omega_step
+                    if count >= step * long_step_ratio:
+                        count = 0
+                        self.set_driver(control_driver, time_step)
+                self.omega = value
+                self.set_driver(control_driver, time_step)
+            # 直行的插值
+            elif mode == "Straight":
+                speed_step = value / step
+                long_step_ratio = 1 / 1000
+                count = 0
+                for i in range(step):
+                    count += 1
+                    self.speed += speed_step
+                    if count >= step * long_step_ratio:
+                        count = 0
+                        self.set_driver(control_driver, time_step)
+                self.speed = value
+                self.set_driver(control_driver, time_step)
 
     # 刹车动作, 用插值，总用时stop_time, 分step步
     def clear_driver(self, stop_time, step, control_driver):
         time_step = stop_time / step
-        # 转弯的插值
-        if self.omega != 0:
-            omega_step = self.omega / step
-            for i in range(step):
-                self.omega = self.omega - omega_step
-                self.set_driver(control_driver, stop_time / step)
-            self.radius = 0
-            self.omega = 0
-        # 直行的插值
-        elif self.speed != 0:
-            speed_step = self.speed / step
-            for i in range(step):
-                self.speed = self.speed - speed_step
-                self.set_driver(control_driver, stop_time / step)
-            self.speed = 0
-        else:
-            time.sleep(0.2)
-            return
+        version = 2
+        if version == 1:
+            # 转弯的插值
+            if self.omega != 0:
+                omega_step = self.omega / step
+                for i in range(step):
+                    self.omega = self.omega - omega_step
+                    self.set_driver(control_driver, time_step)
+                self.radius = 0
+                self.omega = 0
+                self.set_driver(control_driver, time_step)
+            # 直行的插值
+            elif self.speed != 0:
+                speed_step = self.speed / step
+                for i in range(step):
+                    self.speed = self.speed - speed_step
+                    self.set_driver(control_driver, time_step)
+                self.speed = 0
+                self.set_driver(control_driver, time_step)
+        elif version == 2:
+            # 转弯的插值
+            if self.omega != 0:
+                omega_step = self.omega / step
+                long_step_ratio = 1 / 1000
+                count = 0
+                for i in range(step):
+                    count += 1
+                    self.omega -= omega_step
+                    if count >= step * long_step_ratio:
+                        count = 0
+                        self.set_driver(control_driver, time_step)
+                self.radius = 0
+                self.omega = 0
+                self.set_driver(control_driver, time_step)
+            # 直行的插值
+            elif self.speed != 0:
+                speed_step = self.speed / step
+                long_step_ratio = 1 / 1000
+                count = 0
+                for i in range(step):
+                    count += 1
+                    self.speed -= speed_step
+                    if count >= step * long_step_ratio:
+                        count = 0
+                        self.set_driver(control_driver, time_step)
+                self.speed = 0
+                self.set_driver(control_driver, time_step)
 
     # 插值，主要用于直行的前进和后退改变，直行到转弯的改变，转弯到转弯的改变，
     # 最终speed或者omega变为value值
     def interpolation(self, mode, times, steps, value, control_driver):
-        if mode == "Straight":
-            value_step = (value - self.speed) / steps
-            time_step = times / steps
-            for i in range(steps):
-                self.speed += value_step
+        version = 2
+        time_step = times / steps
+        if version == 1:
+            if mode == "Straight":
+                value_step = (value - self.speed) / steps
+
+                for i in range(steps):
+                    self.speed += value_step
+                    self.set_driver(control_driver, time_step)
+            elif mode == "Straight2Turn":
+                # # 先停止直行
+                # self.clear_driver(times / 2, steps, control_driver)
+                # self.speed = 0  # 确保无速度信息
+                # # 然后开始转弯
+                # self.start_driver("Turn", times / 2, steps, value, control_driver)
+
+                # 另外一种方案，直接同时递减speed递增omega
+                speed_step = self.speed / steps
+                omega_step = value / steps
+                for i in range(steps):
+                    self.speed -= speed_step
+                    self.omega += omega_step
+                    self.set_driver(control_driver, times / steps)
+                self.speed = 0  # 确保无速度信息
+
+            elif mode == "Turn2Straight":
+                # # 先停止转弯
+                # self.clear_driver(times / 2, steps, control_driver)
+                # self.radius = 0
+                # self.omega = 0
+                # # 然后开始直行
+                # self.start_driver("Straight", times / 2, steps, value, control_driver)
+
+                # 另外一种方案，直接同时递减omega递增speed
+                omega_step = self.omega / steps
+                speed_step = value / steps
+                for i in range(steps):
+                    self.omega -= omega_step
+                    self.speed += speed_step
+                    self.set_driver(control_driver, times / steps)
+                pass
+                self.omega = 0
+                self.radius = 0
+
+            elif mode == "Turn2Turn":
+                # 先递减原来的，再递增新的
+                # self.clear_driver(times/8, steps, control_driver)
+                # # self.omega = 0
+                # self.design_radius()
+                # self.start_driver("Turn", times*7/8, steps, value, control_driver)
+                # 同方向直接变成新的转弯
+                if value * self.omega > 0:
+                    self.design_radius()
+                    self.omega = value
+                    self.set_driver(control_driver, 0.1)
+                # 不同方向
+                else:
+                    omega_step = (value-self.omega) / steps
+                    for i in range(steps):
+                        self.omega += omega_step
+                        if self.omega * value > 0:
+                            self.design_radius()
+                        self.set_driver(control_driver, times / steps)
+                    pass
+                    self.omega = value
+                    self.set_driver(control_driver, 0.1)
+
+        elif version == 2:
+            long_step_ratio = 1 / 1000
+            if mode == "Straight":
+                value_step = (value - self.speed) / steps
+                time_step = times / steps
+                count = 0
+                for i in range(steps):
+                    count += 1
+                    self.speed += value_step
+                    if count >= steps * long_step_ratio:
+                        count = 0
+                        # print(self.speed, count, steps * long_step_ratio)
+                        self.set_driver(control_driver, time_step)
+                self.speed = value
                 self.set_driver(control_driver, time_step)
-        elif mode == "Straight2Turn":
-            # # 先停止直行
-            # self.clear_driver(times / 2, steps, control_driver)
-            # self.speed = 0  # 确保无速度信息
-            # # 然后开始转弯
-            # self.start_driver("Turn", times / 2, steps, value, control_driver)
+            elif mode == "Straight2Turn":
+                # 另外一种方案，直接同时递减speed递增omega
+                speed_step = self.speed / steps
+                omega_step = value / steps
+                count = 0
+                for i in range(steps):
+                    count += 1
+                    self.speed -= speed_step
+                    self.omega += omega_step
+                    if count >= steps * long_step_ratio:
+                        count = 0
+                        self.set_driver(control_driver, time_step)
+                self.speed = 0
+                self.omega = value
+                self.set_driver(control_driver, time_step)
 
-            # 另外一种方案，直接同时递减speed递增omega
-            speed_step = self.speed / steps
-            omega_step = value / steps
-            for i in range(steps):
-                self.speed -= speed_step
-                self.omega += omega_step
-                self.set_driver(control_driver, times / steps)
-            self.speed = 0  # 确保无速度信息
+            elif mode == "Turn2Straight":
+                # # 先停止转弯
+                # self.clear_driver(times / 2, steps, control_driver)
+                # self.radius = 0
+                # self.omega = 0
+                # # 然后开始直行
+                # self.start_driver("Straight", times / 2, steps, value, control_driver)
 
-        elif mode == "Turn2Straight":
-            # # 先停止转弯
-            # self.clear_driver(times / 2, steps, control_driver)
-            # self.radius = 0
-            # self.omega = 0
-            # # 然后开始直行
-            # self.start_driver("Straight", times / 2, steps, value, control_driver)
+                # 另外一种方案，直接同时递减omega递增speed
+                # omega_step = self.omega / steps
+                # speed_step = value / steps
+                # count = 0
+                # for i in range(steps):
+                #     count += 1
+                #     self.omega -= omega_step
+                #     self.speed += speed_step
+                #     if count >= steps * long_step_ratio:
+                #         count = 0
+                #         self.set_driver(control_driver, time_step)
+                self.omega = 0
+                self.radius = 0
+                self.speed = value
+                self.set_driver(control_driver, time_step)
 
-            # 另外一种方案，直接同时递减omega递增speed
-            omega_step = self.omega / steps
-            speed_step = value / steps
-            for i in range(steps):
-                self.omega -= omega_step
-                self.speed += speed_step
-                self.set_driver(control_driver, times / steps)
-            pass
-            self.omega = 0
-            self.radius = 0
-
-        elif mode == "Turn2Turn":
-            # 先递减原来的，再递增新的
-
-            # self.clear_driver(times/8, steps, control_driver)
-            # # self.omega = 0
-            # self.design_radius()
-            # self.start_driver("Turn", times*7/8, steps, value, control_driver)
-
-            # 直接变成新的转弯
-            self.design_radius()
-            self.omega = value
-            self.set_driver(control_driver, 0.1)
+            elif mode == "Turn2Turn":
+                # 先递减原来的，再递增新的
+                # self.clear_driver(times/8, steps, control_driver)
+                # # self.omega = 0
+                # self.design_radius()
+                # self.start_driver("Turn", times*7/8, steps, value, control_driver)
+                # 同方向直接变成新的转弯
+                if value * self.omega > 0:
+                    self.design_radius()
+                    self.omega = value
+                    self.set_driver(control_driver, 0.1)
+                # 不同方向
+                else:
+                    self.design_radius()
+                    self.omega = value
+                    self.set_driver(control_driver, 0.1)
+                    # omega_step = (value - self.omega) / steps
+                    # count = 0
+                    # for i in range(steps):
+                    #     count += 1
+                    #     self.omega += omega_step
+                    #     if self.omega * value > 0:
+                    #         self.design_radius()
+                    #     if count >= steps * long_step_ratio:
+                    #         count = 0
+                    #         self.set_driver(control_driver, time_step)
+                    # self.omega = value
+                    # self.set_driver(control_driver, time_step)
             pass
         return
 
     # 前进后退
     def action_forward_back(self, control_driver):
         # 转弯变直行
-        speed_default = 0.2
+        speed_default = 0.4
         time_change_default = 0.1
-        step_numbers_default = 50000
+        step_numbers_default = 10000000
         if self.omega != 0:
             if self.expect_x < 0:
-                print("Action mode: Turn2Backward\n")
+                # print("Action mode: Turn2Backward\n")
                 self.interpolation("Turn2Straight", time_change_default, step_numbers_default, -speed_default, control_driver)
             else:
-                print("Action mode: Turn2Forward\n")
+                # print("Action mode: Turn2Forward\n")
                 self.interpolation("Turn2Straight", time_change_default, step_numbers_default, speed_default, control_driver)
         # 后退
         elif self.expect_x < 0:
             if self.speed == 0:
-                print("Action mode: Start Backward\n")
+                # print("Action mode: Start Backward\n")
                 self.start_driver("Straight", time_change_default, step_numbers_default, -speed_default, control_driver)
             elif self.speed > 0:
-                print("Action mode: Forward2Backward\n")
+                # print("Action mode: Forward2Backward\n")
                 self.interpolation("Straight", time_change_default, step_numbers_default, -speed_default, control_driver)
             elif self.speed < 0:
-                print("Action mode: Moving Backward\n")
+                # print("Action mode: Moving Backward\n")
+                pass
         # 直行
         elif self.expect_x > 0:
             if self.speed == 0:
-                print("Action mode: Start Forward\n")
+                # print("Action mode: Start Forward\n")
                 self.start_driver("Straight", time_change_default, step_numbers_default, speed_default, control_driver)
             elif self.speed < 0:
-                print("Action mode: Backward2Forward\n")
+                # print("Action mode: Backward2Forward\n")
                 self.interpolation("Straight", time_change_default, step_numbers_default, speed_default, control_driver)
             elif self.speed > 0:
-                print("Action mode: Moving Forward\n")
-        pass
+                # print("Action mode: Moving Forward\n")
+                pass
 
     # 旋转
     def action_rotation(self, control_driver):
@@ -240,25 +401,25 @@ class PositionControl2(object):
     # 前进转弯
     def action_forward_and_turning(self, control_driver):
         # 直行状态转转弯
-        omega_default = 0.2
+        omega_default = 0.4
         time_change_default = 0.1
-        step_numbers_default = 2500
+        step_numbers_default = 100000
         if self.speed != 0:
             self.design_radius()
             if self.expect_theta < 0:
-                print("Action mode: Straight2Turn_R\n")
+                # print("Action mode: Straight2Turn_R\n")
                 self.interpolation("Straight2Turn", time_change_default, step_numbers_default, -omega_default, control_driver)
             else:
-                print("Action mode: Straight2Turn_L\n")
+                # print("Action mode: Straight2Turn_L\n")
                 self.interpolation("Straight2Turn", time_change_default, step_numbers_default, omega_default, control_driver)
         # 起步转弯
         elif self.omega == 0:
             self.design_radius()
             if self.expect_theta < 0:
-                print("Action mode: Start Turning_R\n")
+                # print("Action mode: Start Turning_R\n")
                 self.start_driver("Turn", time_change_default, step_numbers_default, -omega_default, control_driver)
             else:
-                print("Action mode: Start Turning_L\n")
+                # print("Action mode: Start Turning_L\n")
                 self.start_driver("Turn", time_change_default, step_numbers_default, omega_default, control_driver)
         # 转弯转转弯
         else:
@@ -270,18 +431,20 @@ class PositionControl2(object):
             # 保持原状态的转弯
             if temp_radius == self.radius and self.omega * self.expect_theta > 0:
                 if self.expect_theta < 0:
-                    print("Action mode: Turning_R\n")
+                    # print("Action mode: Turning_R\n")
+                    pass
                 else:
-                    print("Action mode: Turning_L\n")
+                    # print("Action mode: Turning_L\n")
+                    pass
 
             else:
                 if self.expect_theta < 0:
-                    print("Action mode: Turn2Turn_R, radius:", temp_radius, "->", self.radius)
+                    # print("Action mode: Turn2Turn_R, radius:", temp_radius, "->", self.radius)
                     self.interpolation("Turn2Turn", time_change_default, step_numbers_default, -omega_default, control_driver)
                 else:
-                    print("Action mode: Turn2Turn_L, radius:", temp_radius, "->", self.radius)
+                    # print("Action mode: Turn2Turn_L, radius:", temp_radius, "->", self.radius)
                     self.interpolation("Turn2Turn", time_change_default, step_numbers_default, omega_default, control_driver)
-        print("omega:", self.omega)
+        # print("omega:", self.omega)
         pass
 
 

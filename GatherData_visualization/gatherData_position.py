@@ -19,9 +19,9 @@ import time
 pwd = os.path.abspath(os.path.abspath(__file__))
 father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
 sys.path.append(father_path)
-import threading
 
-# import FootDetector.DemonstrationProcess as DP
+
+import FootDetector.DemonstrationProcess as DP
 import LegDetector.LegInformation as LegLidar
 import DigitalDriver.ControlandOdometryDriver as CD
 import SoftSkin.SoftSkin as SS
@@ -39,7 +39,7 @@ def loop(event):
 
 
 if __name__ == '__main__':
-    # pd = DP.DemonProcess()
+    pd = DP.DemonProcess()
     cd = CD.ControlDriver(record_mode=True)
     ss = SS.SoftSkin()
     # IMU = imu.ArduinoRead()
@@ -47,8 +47,8 @@ if __name__ == '__main__':
     # thread_imu = threading.Thread(target=IMU.reading_data_from_arduino, args=())
     # thread_imu.start()
     event = threading.Event()
-    # thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(None, True))
-    # thread_ir.start()
+    thread_ir = multiprocessing.Process(target=pd.start_Demon, args=(None, True))
+    thread_ir.start()
     thread_soft_skin = threading.Thread(target=ss.label_front_follow, args=())
     thread_soft_skin.start()
     thread_control_driver = threading.Thread(target=cd.control_part, args=())
@@ -83,20 +83,37 @@ if __name__ == '__main__':
                 cd.odo.getTurningRadius()
                 # IMU.imu_human
             ))
-            file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%f\n" % (time.time(),
-                                                                         cd.odo.getROS_XYTHETA()[0],
-                                                                         cd.odo.getROS_XYTHETA()[1],
-                                                                         cd.odo.THETA,
-                                                                         # cd.odo.getROS_XTTHETA()[2],
-                                                                         cd.odo.get_dxdydtheta()[0],
-                                                                         cd.odo.get_dxdydtheta()[1],
-                                                                         leg.left_leg_x,
-                                                                         leg.left_leg_y,
-                                                                         leg.right_leg_x,
-                                                                         leg.right_leg_y,
-                                                                         ss.label,
-                                                                         cd.odo.Radius
-                                                                         ))
+            # file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%f\n" % (time.time(),
+            #                                                              cd.odo.getROS_XYTHETA()[0],
+            #                                                              cd.odo.getROS_XYTHETA()[1],
+            #                                                              cd.odo.THETA,
+            #                                                              # cd.odo.getROS_XTTHETA()[2],
+            #                                                              cd.odo.get_dxdydtheta()[0],
+            #                                                              cd.odo.get_dxdydtheta()[1],
+            #                                                              leg.left_leg_x,
+            #                                                              leg.left_leg_y,
+            #                                                              leg.right_leg_x,
+            #                                                              leg.right_leg_y,
+            #                                                              ss.label,
+            #                                                              cd.odo.Radius
+            #                                                              ))
+            file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%f\t%f\t%f\t%f\n" % (time.time(),
+                                                                             cd.odo.getROS_XYTHETA()[0],
+                                                                             cd.odo.getROS_XYTHETA()[1],
+                                                                             cd.odo.THETA,
+                                                                             # cd.odo.getROS_XTTHETA()[2],
+                                                                             cd.odo.get_dxdydtheta()[0],
+                                                                             cd.odo.get_dxdydtheta()[1],
+                                                                             leg.left_leg_x,
+                                                                             leg.left_leg_y,
+                                                                             leg.right_leg_x,
+                                                                             leg.right_leg_y,
+                                                                             ss.label,
+                                                                             cd.odo.Radius,
+                                                                             cd.odo.d_l,
+                                                                             cd.odo.d_r,
+                                                                             cd.odo.d_theta
+                                                                             ))
             # file.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (time.time(),
             #                                                              cd.odo.getROS_XYTHETA()[0],
             #                                                              cd.odo.getROS_XYTHETA()[1],
