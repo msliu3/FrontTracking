@@ -45,6 +45,7 @@ class ControlDriver(Thread):
         baud_rate = driver.baud_rate
         self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.05)    #左轮串口
         self.ser_r = serial.Serial(driver.right, baud_rate, timeout=0.05)   #右轮串口
+        # self.MCU = serial.Serial("/dev/ttyACM0", baud_rate=9600, timeout=1) #Arduino
         self.monitor_l = DM.DriverMonitor()
         self.monitor_r = DM.DriverMonitor()
         self.plot_x = [0.0]
@@ -77,6 +78,8 @@ class ControlDriver(Thread):
         return read_byte
 
     def change_speed(self, v, omega):
+        if (self.speed + self.omega != 0) and (v + omega == 0):
+            self.stop_motor()
         self.speed = v
         self.omega = omega
         time.sleep(0.05)
@@ -116,9 +119,7 @@ class ControlDriver(Thread):
 
     def control_part_speedmode(self):
         print("\n===================================== Start speed control ! =====================================")
-        end = [0x00, 0x00, 0x00, 0x00]
         self.start_motor()
-
         # 如果 record_mode 是 True，则停掉电机，只记录数据
         if self.record_mode:
             self.stop_motor()
@@ -177,6 +178,7 @@ class ControlDriver(Thread):
         pass
 
     def control_part_positionmode(self):
+        # This part is not yet completed
         print("\n===================================== Start position control ! =====================================")
         start = [0x00, 0x00, 0x01, 0x01]
         pc_mode = [0x02, 0x00, 0xd0, 0xd2]
@@ -205,6 +207,9 @@ class ControlDriver(Thread):
         self.is_stopped = False
 
     def stop_motor(self):    #关闭电机，同时关闭刹车
+        self.speed = 0
+        self.omega = 0
+        time.sleep(0.05)
         end = [0x00, 0x00, 0x00, 0x00]
         self.ser_l.write(bytes(end))
         self.ser_l.read(2)
@@ -217,6 +222,11 @@ class ControlDriver(Thread):
 
         self.is_stopped = True
 
+    def ext_brake(self, command):
+        self.speed = 0
+        self.omega = 0
+        pass
+
     def run(self):
         if self.position_mode:
             self.control_part_positionmode()
@@ -225,15 +235,19 @@ class ControlDriver(Thread):
 
     pass
 
+
 def callback_vel(vel, cd):
     # callback function to change the speed when receives /cmd_vel topic
     speed = vel.linear.x
     omega = vel.angular.z
-    # if velocity command is not zero and motors are stopped, start it
-    if cd.is_stopped and (speed+omega!=0):
-        cd.start_motor()
-    cd.change_speed(speed, omega)
-    pass
+    if (speed != cd.speed) or (omega != cd.omega):
+        # if velocity command is not zero and motors are stopped, start it
+        if cd.is_stopped and (speed+omega != 0):
+            cd.start_motor()
+        cd.change_speed(speed, omega)
+    else:
+        pass
+
 
 if __name__ == '__main__':
 
