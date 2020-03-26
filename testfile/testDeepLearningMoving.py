@@ -29,7 +29,7 @@ import Control.DeepLearning_DetectCase as DL
 import Control.MatchCase_NN as MC
 import threading
 import DigitalDriver.ControlDriver as CD
-import Control.PositionControl2 as PC
+import Control.PositionControl as PC
 import LegDetector.LegInformation as LegLidar
 import multiprocessing
 
@@ -37,14 +37,19 @@ import multiprocessing
 def control_loop(position_control, control_driver, flag, event):
     while True:
         event.wait()
-        position_control.top_decision(control_driver)
+        if position_control.action_over:
+            if matcher.back or matcher.forward:
+                # print("back_forward", pc.expect_x, pc.expect_theta)
+                position_control.action_forward_back(control_driver)
+                matcher.clear_case()
+            elif matcher.turning:
+                # print("turn")
+                position_control.action_forward_and_turning(control_driver)
+                matcher.clear_case()
         event.clear()
-        if flag == 0:
-            position_control.set_expect(0, 0)
-            break
 
 
-def loop2(deep, queue, matcher, pc, event):
+def loop2(deep, queue, matcher, pc, event,control_driver):
     while True:
         time.sleep(0.05)
         result = 1
@@ -76,7 +81,7 @@ if __name__ == '__main__':
     queue = multiprocessing.Queue()
     pd = DP.DemonProcess()
     matcher = MC.MatchCase(foot=pd.foot)
-    position_control = PC.PositionControl2()
+    position_control = PC.PositionControl()
     event = threading.Event()
     nn_model = DL.DeepLearningDetectCase(model_name="dnn1.ckpt")
     cd = CD.ControlDriver()
@@ -86,7 +91,7 @@ if __name__ == '__main__':
     thread_ir.start()
     p1 = threading.Thread(target=control_loop, args=(position_control, cd, flag_stop, event))
     p1.start()
-    p2 = threading.Thread(target=loop2, args=(nn_model, queue, matcher, position_control, event))  # nn_model,
+    p2 = threading.Thread(target=loop2, args=(nn_model, queue, matcher, position_control, event,cd))  # nn_model,
     p2.start()
 
     thread_control_driver = threading.Thread(target=cd.control_part, args=())

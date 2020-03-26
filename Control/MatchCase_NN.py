@@ -109,10 +109,13 @@ class MatchCase(object):
                 return self.expect_x, self.expect_theta
             elif front_x > 0.05:
                 if nn_result == 1 or nn_result == 4:
+                    self.forward = True
                     return front_x, 0
                 elif nn_result == 2 or nn_result == 3:
+                    self.turning = True
                     return front_x, -90 if nn_result == 2 else 90
                 elif nn_result == 0 or nn_result == 5:
+                    self.turning = True
                     return front_x, 45 if nn_result == 0 else -45
                     # 总是能分出前后脚的所以不需要判断两脚并一块的情况
         # else:

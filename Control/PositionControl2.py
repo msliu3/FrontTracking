@@ -361,7 +361,7 @@ class PositionControl2(object):
     # 前进后退
     def action_forward_back(self, control_driver):
         # 转弯变直行
-        speed_default = 0.2
+        speed_default = 0.25
         time_change_default = 0.1
         step_numbers_default = 10000000
         if self.omega != 0:
@@ -401,7 +401,7 @@ class PositionControl2(object):
     # 前进转弯
     def action_forward_and_turning(self, control_driver):
         # 直行状态转转弯
-        omega_default = 0.2
+        omega_default = 0.25
         time_change_default = 0.1
         step_numbers_default = 100000
         if self.speed != 0:
