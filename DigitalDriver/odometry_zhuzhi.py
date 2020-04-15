@@ -4,7 +4,7 @@ from DigitalDriver import ControlDriver as CD
 import math
 
 class Odometry:
-    def __init__(self, X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0, plot=False):
+    def __init__(self, X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0, imu_yaw=0.0, use_imu = False, plot=False):
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
         self.d_theta = 0.0
         self.d_l, self.d_r = 0.0, 0.0
@@ -12,35 +12,43 @@ class Odometry:
         self.Radius = 0.0
         self.X, self.Y = X, Y
         self.dX, self.dY = 0.0, 0.0
-        self.plot = plot
         self.THETA = THETA
-        self.dx, self.dy = 0.0, 0.0  # Walker坐标系下的坐标变化
+        self.use_imu = use_imu
+        self.imu_yaw = imu_yaw
+        self.imu_yaw_p = imu_yaw
+        self.plot = plot
+        self.dx, self.dy = 0.0, 0.0
         print('X=', self.X, 'm;  Y=', self.Y, 'm;  THETA=', self.THETA / math.pi * 180, '°')
 
     # 更新里程计读取到的信息
-    def updatePose(self, Odo_l, Odo_r):
+    def updatePose(self, Odo_l, Odo_r, imu_yaw):
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
+        self.imu_yaw = imu_yaw
         # 计算两轮相对于上一时刻的位移
         self.d_l = ((self.Odo_l - self.p_l) / 4096) * 2 * math.pi * 0.085
         self.d_r = ((self.Odo_r - self.p_r) / 4096) * 2 * math.pi * 0.085
-        # print('Left displacement: ', self.d_l, 'm;  Right displacement: ', self.d_r, 'm;')
+        # 计算dθ，逆时针为正，顺时针为负
+        if not self.use_imu:
+            self.d_theta = (self.d_r - self.d_l) / 0.54  # 左转>0, 右转<0
+        else:
+            # use yaw readings from IMU
+            self.d_theta = self.imu_yaw - self.imu_yaw_p
         # 保存此时刻编码器数据
         self.p_l = self.Odo_l
         self.p_r = self.Odo_r
+        self.imu_yaw_p = self.imu_yaw
 
-        # 计算dθ，逆时针为正，顺时针为负
-        self.d_theta = (self.d_r - self.d_l) / 0.54  # 左转>0, 右转<0
-        # 更新朝向角θ（θ∈(-π，π]）
+        # update THETA (-pi, pi]
         self.THETA += self.d_theta
         if self.THETA > math.pi:
             self.THETA -= 2 * math.pi
         elif self.THETA <= -math.pi:
             self.THETA += 2 * math.pi
 
-        # 计算转弯半径 R
+        # get turning raidus
         if self.d_theta:
             # print("odo:",self.d_l,self.d_r)
-            if (self.d_l + self.d_r) == 0:  # 原地转向或静止
+            if (self.d_l + self.d_r) == 0:
                 self.Radius = 0
             else:
                 if self.d_l * self.d_r > 0:  # 转向中心在walker之外
