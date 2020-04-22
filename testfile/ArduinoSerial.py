@@ -1,27 +1,22 @@
 import serial
+from SoftSkin import SoftSkin
 import  time
-# from std_msgs.msg import Float64MultiArray, MultiArrayDimension, MultiArrayLayout
 
 if __name__ == "__main__":
-    port = "/dev/ttyACM0"
 
-    ser = serial.Serial(port, 9600, timeout=1)
-    ser.flushInput()
+    ss = SoftSkin.SoftSkin()
 
     try:
         while True:
-            # command = input('Command: ')
-            # ser.write(bytes(command, encoding='utf-8'))
-            # print('Command sent!')
-            # time.sleep(2)
-            response = ser.readline().decode('utf-8')
+            command = input('Command: ')
+            ss.serial.write(bytes(command, encoding='utf-8'))
+            print('Command sent!')
+            ss.read_softskin_data()
+            # handle_data = ser.readline().decode("utf-8")
+            # handle_data = handle_data.split('\r')[0]
+            # handle_data = handle_data.split(',')
+            # handle_data = list(map(int, handle_data))
 
-            handle_data = ser.readline().decode("utf-8")
-            handle_data = handle_data.split('\r')[0]
-            handle_data = handle_data.split(',')
-            handle_data = list(map(int, handle_data))
-
-            print('Response received: ',response)
     except:
         print('Failure!')
-        ser.close()
+        ss.serial.close()

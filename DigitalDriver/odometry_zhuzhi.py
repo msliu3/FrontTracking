@@ -20,6 +20,7 @@ class Odometry:
     # 更新里程计读取到的信息
     def updatePose(self, Odo_l, Odo_r):
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
+        # print("Digital distance:",self.Odo_l,self.Odo_r)
         # 计算两轮相对于上一时刻的位移
         self.d_l = ((self.Odo_l - self.p_l) / 4096) * 2 * math.pi * 0.085
         self.d_r = ((self.Odo_r - self.p_r) / 4096) * 2 * math.pi * 0.085
@@ -47,11 +48,11 @@ class Odometry:
                     self.Radius = min(abs(self.d_l / self.d_theta), abs(self.d_r / self.d_theta)) + 0.27
                 else:  # 转向中心在walker之内
                     self.Radius = 0.27 - min(abs(self.d_l / self.d_theta), abs(self.d_r / self.d_theta))
-            # print('Turning Radius: ', self.Radius, 'm;')
         else:
             # print('No Turning!')
             self.Radius = 0
             pass
+        # print('Turning Radius: ', self.Radius, 'm;',self.d_theta)
 
         # 计算坐标变化dX, dY
         if self.d_l == self.d_r:  # 直行
@@ -82,7 +83,7 @@ class Odometry:
         # 更新绝对坐标系下坐标变化
         self.X += self.dX
         self.Y += self.dY
-
+        # print("X,Y",self.X,self.Y)
         return (self.X, self.Y, self.THETA)
 
     def getROS_XYTHETA(self):

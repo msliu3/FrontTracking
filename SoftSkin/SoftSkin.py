@@ -53,7 +53,7 @@ def detect_serials(description="target device", vid=0x10c4, pid=0xea60):
 class SoftSkin(object):
     def __init__(self):
         port_name = detect_serials(description="ttyACM0")  # Arduino Mega 2560 ttyACM0
-        baud_rate = 9600
+        baud_rate = 115200
         print(port_name, baud_rate)
         self.serial = serial.Serial(port_name, baud_rate, timeout=None)
 
@@ -72,6 +72,8 @@ class SoftSkin(object):
                            12: [12, "right_right"],
                            100: "No_data"}
         self.label = ""
+
+        self.is_locked = False
         pass
 
     def read_softskin_data(self, flag_show=1):
@@ -89,10 +91,11 @@ class SoftSkin(object):
             if flag_show:
                 print(one_line_data)
             self.raw_data = one_line_data
+            return one_line_data
         except BaseException as be:
             print("Data error", be)
             self.raw_data = []
-        pass
+
 
     def build_base_line_data(self, initial_size=15):
         """
@@ -217,6 +220,20 @@ class SoftSkin(object):
             else:
                 self.label = self.label_dict[100]
                 # print(self.label)
+
+    def brake_control(self, command=False):
+        if command:
+            if not self.is_locked:
+                self.serial.write(bytes('B', encoding='utf-8'))
+                self.read_softskin_data()
+                self.is_locked = True
+        else:
+            if self.is_locked:
+                self.serial.write(bytes('R', encoding='utf-8'))
+                self.read_softskin_data()
+                self.is_locked = False
+            pass
+
 
 
 if __name__ == '__main__':

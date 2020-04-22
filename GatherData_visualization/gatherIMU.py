@@ -14,6 +14,8 @@ None
 """
 
 # import lib
+from threading import Thread
+
 import serial
 import serial.tools.list_ports
 import re
@@ -54,13 +56,16 @@ def detect_serials(description, vid=0x10c4, pid=0xea60):
     return None
 
 
-class ArduinoRead(object):
+class ArduinoRead(Thread):
     def __init__(self):
-        port_name = detect_serials(description="ttyACM") #CP2102 USB to UART Bridge Controller Arduino Mega 2560 (COM15)
+        Thread.__init__(self)
+        port_name = detect_serials(
+            description="ttyACM")  # CP2102 USB to UART Bridge Controller Arduino Mega 2560 (COM15)
         baud_rate = 115200
         print(port_name, baud_rate)
         self.serial = serial.Serial(port_name, baud_rate, timeout=None)
-        self.imu_human = 0.0
+        self.imu_walker_baseline = 0.0
+        self.times = 10
         self.imu_robot = 0.0
         self.terminal_flage = False
         pass
@@ -70,13 +75,26 @@ class ArduinoRead(object):
         pass
 
     def reading_data_from_arduino(self):
+        while self.times > 0:
+            data = self.serial.readline()
+            line = data.decode()
+            try:
+                self.imu_walker_baseline += float(line)
+                self.times -= 1
+            except IndexError as i:
+                print(i)
+        self.imu_walker_baseline = self.imu_walker_baseline / 10
         while not self.terminal_flage:
             data = self.serial.readline()
             line = data.decode()
-            self.imu_human = float(line)
+            try:
+                self.imu_robot = float(line) - self.imu_walker_baseline
+            except IndexError as i:
+                print(i)
+            # print(self.imu_robot)
 
-            # print(self.imu_human)
-
+    def run(self):
+        self.reading_data_from_arduino()
 
 
 if __name__ == '__main__':
