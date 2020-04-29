@@ -15,6 +15,7 @@ class Odometry:
         self.plot = plot
         self.THETA = THETA
         self.dx, self.dy = 0.0, 0.0  # Walker坐标系下的坐标变化
+        self.tick_threshold = 0
         print('X=', self.X, 'm;  Y=', self.Y, 'm;  THETA=', self.THETA / math.pi * 180, '°')
 
     # 更新里程计读取到的信息
@@ -22,8 +23,15 @@ class Odometry:
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
         # print("Digital distance:",self.Odo_l,self.Odo_r)
         # 计算两轮相对于上一时刻的位移
-        self.d_l = ((self.Odo_l - self.p_l) / 4096) * 2 * math.pi * 0.085
-        self.d_r = ((self.Odo_r - self.p_r) / 4096) * 2 * math.pi * 0.085
+        if abs(self.Odo_l - self.p_l) >= self.tick_threshold:
+            self.d_l = ((self.Odo_l - self.p_l) / 4096) * 2 * math.pi * 0.085
+        else:
+            self.d_l = 0
+
+        if abs(self.Odo_r - self.p_r) >= self.tick_threshold:
+            self.d_r = ((self.Odo_r - self.p_r) / 4096) * 2 * math.pi * 0.085
+        else:
+            self.d_r = 0
         # print('Left displacement: ', self.d_l, 'm;  Right displacement: ', self.d_r, 'm;')
         # 保存此时刻编码器数据
         self.p_l = self.Odo_l

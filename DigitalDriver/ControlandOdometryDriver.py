@@ -22,7 +22,7 @@ import time
 from threading import Thread
 from DigitalDriver import DigitalServoDriver_linux as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
-from DigitalDriver import odometry_zhuzhi as odo
+from DigitalDriver import WheelEncoderOdometry as odo
 import matplotlib.pyplot as plt
 import serial
 import math

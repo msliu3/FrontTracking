@@ -21,6 +21,7 @@ import serial
 import serial.tools.list_ports
 import numpy as np
 import DigitalDriver.ControlDriver as CD
+import time
 
 
 def print_serial(port):
@@ -74,6 +75,7 @@ class SoftSkin(object):
         self.label = ""
 
         self.is_locked = False
+        self.locking = False
         pass
 
     def read_softskin_data(self, flag_show=1):
@@ -202,7 +204,7 @@ class SoftSkin(object):
         返回列表，值为0,1
         :return:
         """
-        self.read_softskin_data(0)
+        self.read_softskin_data()
         normalize = np.array(self.raw_data) - np.array(self.base_data)
         normalize[normalize < power] = 0
         normalize[normalize >= power] = 1
@@ -234,10 +236,94 @@ class SoftSkin(object):
                 self.is_locked = False
             pass
 
+    def detect_accident(self, using=True):
+        """using 代表用户正在使用"""
+        """运行之前应运行baselinebuild"""
+        add = np.ones(len(self.base_data)).reshape(1, -1)
+        while using and not self.locking:
+            # print('detecting')
+            # self.read_softskin_data()
+            if len(self.raw_data) != len(self.base_data):
+                continue
+            temp_data = np.array(self.raw_data) - np.array(self.base_data)
+            max_pressure = temp_data.max()
+            if max_pressure > 165:
+                self.locking = True
+                print(max_pressure)
+                continue
+            else:
+                temp_data[temp_data < 15] = 0
+                temp_data[temp_data >= 15] = 1
+                temp_sum = add.dot(temp_data)
+                print(temp_sum)
+                if temp_sum > 4:
+                    self.locking = True
+                    continue
 
+    def unlock(self):
+        lock_a = 0
+        lock_b = 0
+        lock_c = 0
+        add = np.ones(len(self.base_data)).reshape(1, -1)
+        while self.locking:
+            if len(self.raw_data) != len(self.base_data):
+                continue
+            temp_data = np.array(self.raw_data) - np.array(self.base_data)
+            temp_data[temp_data < 20] = 0
+            temp_data[temp_data >= 20] = 1
+            temp_sum = add.dot(temp_data)
+            position = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+            position = np.array(position)
+            position = position.dot(temp_data)
+            print(temp_sum, position)
+            if temp_data[0] == 1 and temp_sum == 1 and not lock_a:
+                lock_a = 1
+                print("LOCK A unlocked")
+            if temp_data[-1] == 1 and temp_sum == 1 and not lock_b:
+                lock_b = 1
+                print("LOCK B unlocked")
+            if temp_data[6] == 1 and temp_sum == 1 and not lock_c:
+                lock_c = 1
+                print("LOCK C unlocked")
+            if lock_a * lock_b * lock_c == 1:
+                self.locking = 0
+                print("All unlocked!")
+
+    def adjust_direction(self, control_driver, using=False):
+        """using 代表用户不在使用"""
+        """运行之前应运行baselinebuild"""
+        add = np.ones(len(self.base_data)).reshape(1, -1)
+        while not using:
+            self.read_softskin_data()
+            if len(self.raw_data) != len(self.base_data):
+                continue
+            temp_data = np.array(self.raw_data) - np.array(self.base_data)
+            max_pressure = temp_data.max()
+            if max_pressure > 100:
+                self.locking = True
+                continue
+            else:
+                temp_data[temp_data < 20] = 0
+                temp_data[temp_data >= 20] = 1
+                temp_sum = add.dot(temp_data)
+                radius_list = [-90, -110, -120, -135, -155, -165, 180,
+                               165, 155, 135, 120, 110, 90]
+                radius_list = np.array(radius_list).reshape(-1, len(radius_list))
+                omega_default = 0.2
+                control_driver.speed = 0
+                control_driver.radius = 0
+                if temp_sum == 1:
+                    radius_temp = temp_data.dot(radius_list)
+                    control_driver.omega = radius_temp / (abs(radius_temp)) * omega_default
+                    time_for_adjust = abs(radius_temp) / omega_default
+                    time.sleep(time_for_adjust)
+                    control_driver.omega = 0
+                    self.locking = 1
+                    break
 
 if __name__ == '__main__':
     softskin = SoftSkin()
+
     # 如果需要使用sit模式，先将轮机翻转，然后将sit_mode=True
     control_driver = CD.ControlDriver(left_right=1)
     control_driver.start()

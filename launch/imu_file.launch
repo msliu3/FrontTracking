@@ -1,0 +1,29 @@
+<!-- xml form -->
+<launch>
+  <node pkg="neo_front_following" type="IMU_serial.py" name="imu_node"></node>
+
+  <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_node">
+      <param name="gain" type="double" value="0.1"/>
+      <param name="zeta" type="double" value="0.0"/>
+      <param name="mag_bias_x" type="double" value="0.0"/>
+      <param name="mag_bias_y" type="double" value="0.0"/>
+      <param name="mag_bias_z" type="double" value="0.0"/>
+      <param name="orientation_stddev" type="double" value="0.0"/>
+      <param name="world_frame" type="string" value="enu"/>
+      <param name="use_mag" type="bool" value="false"/>
+      <param name="use_magnetic_field_msg" type="bool" value="true"/>
+      <param name="constant_dt" type="double" value="0.0"/>
+      <param name="publish_debug_topics" type="bool" value="false"/>
+
+      <param name="publish_tf" type="bool" value="true"/>
+      <param name="fixed_frame" type="string" value="odom"/>
+      <param name="reverse_tf" type="bool" value="false"/>
+  </node>
+
+<!--   <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"> -->
+<!--     <param name="publish_tf" type="bool" value="true"/> -->
+<!--   </node> -->
+
+  <node pkg="rviz" type="rviz" name="rviz"/>
+
+</launch>

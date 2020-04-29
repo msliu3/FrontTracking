@@ -3,7 +3,7 @@
 
   <!-- 启动雷达（这里用的是rplidar A1） -->
   <node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode" output="screen">
-        <param name="serial_port"         type="string" value="/dev/ttyUSB0"/>
+        <param name="serial_port"         type="string" value="/dev/ttyUSB3"/>
         <param name="serial_baudrate"     type="int"    value="115200"/><!--A1/A2 -->
         <!--param name="serial_baudrate"     type="int"    value="256000"--><!--A3 -->
         <param name="frame_id"            type="string" value="laser"/>
@@ -18,10 +18,29 @@
 <!--   <node pkg="neo_front_following" type="neo_remarker.py" name="neo_remarker_node"></node> -->
 
   <node pkg="neo_front_following" type="base_controller.py" name="base_controller_node"></node>
+  <node pkg="neo_front_following" type="IMU_serial.py" name="imu_node"></node>
 
 <!--   <node pkg="neo_front_following" type="vel_publisher.py" name="vel_cmd_node"></node> -->
 
-  <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"></node>
+<!--   <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"></node> -->
+
+  <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_node">
+        <param name="gain" type="double" value="0.1"/>
+        <param name="zeta" type="double" value="0.0"/>
+        <param name="mag_bias_x" type="double" value="0.0"/>
+        <param name="mag_bias_y" type="double" value="0.0"/>
+        <param name="mag_bias_z" type="double" value="0.0"/>
+        <param name="orientation_stddev" type="double" value="0.0"/>
+        <param name="world_frame" type="string" value="enu"/>
+        <param name="use_mag" type="bool" value="true"/>
+        <param name="use_magnetic_field_msg" type="bool" value="true"/>
+        <param name="constant_dt" type="double" value="0.0"/>
+        <param name="publish_debug_topics" type="bool" value="false"/>
+
+        <param name="publish_tf" type="bool" value="false"/>
+        <param name="fixed_frame" type="string" value="odom"/>
+        <param name="reverse_tf" type="bool" value="false"/>
+  </node>
 
 <!--   If we want to use /tf messages, remove the robot_description,  -->
 <!--   robot_state_publisher node, and lines start with -urdf -->
@@ -32,13 +51,13 @@
 <!--   <node name="robot_state_publisher" pkg="robot_state_publisher" -->
 <!--     type="robot_state_publisher" /> -->
 
-  <node name="cartographer_node" pkg="cartographer_ros"
-      type="cartographer_node" args="
-          -configuration_directory $(find cartographer_ros)/configuration_files
-          -configuration_basename backpack_2d_rplidar.lua"
-      output="screen">
-    <remap from="echoes" to="horizontal_laser_2d" />
-  </node>
+<!--   <node name="cartographer_node" pkg="cartographer_ros" -->
+<!--       type="cartographer_node" args=" -->
+<!--           -configuration_directory $(find cartographer_ros)/configuration_files -->
+<!--           -configuration_basename backpack_2d_rplidar.lua" -->
+<!--       output="screen"> -->
+<!--     <remap from="echoes" to="horizontal_laser_2d" /> -->
+<!--   </node> -->
 
   <!--  set up data playback from bag -->
   <param name="/use_sim_time" value="false"/>

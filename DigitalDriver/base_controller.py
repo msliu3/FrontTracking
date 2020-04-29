@@ -10,7 +10,7 @@ import time
 from threading import Thread
 from DigitalDriver import DigitalServoDriver_linux as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
-from DigitalDriver import odometry_zhuzhi as odo
+from DigitalDriver import WheelEncoderOdometry as odo
 import serial
 import math
 
@@ -251,7 +251,7 @@ def callback_vel(vel, cd):
 
 if __name__ == '__main__':
 
-    cd = ControlDriver(V=0.0, OMEGA=0.0, left_right=0, record_mode=True)
+    cd = ControlDriver(V=0.0, OMEGA=0.0, left_right=1, record_mode=True)
     cd.start()
 
     # while True:

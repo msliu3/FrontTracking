@@ -7,10 +7,7 @@ father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
 sys.path.append(father_path)
 
 import math
-import rospy
-from std_msgs.msg import Header
-from sensor_msgs.msg import Imu
-from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
+
 
 # 维特的WT901传感器 数据读取实例程序，
 # 串口协议规定11个字节一个数据包，包头两个字节，包尾一个字节的检验码，中间8个字节存放回传的实际数据
@@ -23,11 +20,38 @@ import binascii
 import threading
 import tkinter as tk
 from datetime import datetime
+import serial.tools.list_ports
+
+def print_serial(port):
+    print("---------------[ %s ]---------------" % port.name)
+    print("Path: %s" % port.device)
+    print("Descript: %s" % port.description)
+    print("HWID: %s" % port.hwid)
+    if not None == port.manufacturer:
+        print("Manufacture: %s" % port.manufacturer)
+    if not None == port.product:
+        print("Product: %s" % port.product)
+    if not None == port.interface:
+        print("Interface: %s" % port.interface)
+    print()
+
+
+def detect_serials(description="target device", vid=0x10c4, pid=0xea60):
+    ports = serial.tools.list_ports.comports()
+    for port in ports:
+        print_serial(port)
+        if port.description.__contains__(description):
+            port_path = port.device
+            return port_path
+        else:
+            print("Cannot find the target device: %s" % description)
+    return None
+
 
 # 配置类
 class Config:
     # 端口号
-    serialPort = 'COM3'
+    serialPort = detect_serials(description="USB2.0-Serial")
     # 波特率
     baudRate = 115200
     # 在传感器数据中，最小的包长度是11个字节
@@ -346,20 +370,17 @@ class MyUI:
         self.textBox = tk.Text(self.frameBottom, height=700, bg='white', font=('Arial', 12))
         self.textBox.place(x=4, y=4)
 
-        # 开启UI
-
+    # 开启UI
     def start(self):
         # 开启窗口主循环
         self.window.mainloop()
 
-        # 显示数据
-
+    # 显示数据
     def showData(self, data):
         self.dataBox.delete(0.0, tk.END)
         self.dataBox.insert(tk.INSERT, data)
 
-        # 显示文本
-
+    # 显示文本
     def showText(self, text):
         self.textBox.delete(0.0, tk.END)
         self.textBox.insert(tk.INSERT, text)
@@ -380,7 +401,7 @@ def quaternion_to_euler(w, x, y, z):
 
 # 主线程
 if __name__ == '__main__':
-
+    run_ROS = True
     displayUI = False
     # 创建串口操作对象
     r = SensorReader()
@@ -393,24 +414,41 @@ if __name__ == '__main__':
     if displayUI:
         u.start()   # 启动UI
 
-    rospy.init_node('base_controller_node')
-    r = rospy.Rate(10)
-    imu = Imu()
-    header = Header()
-    header.frame_id = "imu"
-    imu_pub = rospy.Publisher("imu", Imu, queue_size=10)
+    if run_ROS:
+        import rospy
+        from std_msgs.msg import Header
+        from sensor_msgs.msg import Imu, MagneticField
+        from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
+        print("success")
+        rospy.init_node('imu_node')
+        r = rospy.Rate(10)
+        imu = Imu()
+        mag = MagneticField()
+        header = Header()
+        header.frame_id = "imu_link"
+        imu_pub = rospy.Publisher("imu/data_raw", Imu, queue_size=10)
+        mag_pub = rospy.Publisher("imu/mag", MagneticField, queue_size=10)
 
-    while not rospy.is_shutdown():
+        while not rospy.is_shutdown():
+            # Publish imu message on ROS
+            imu.header.stamp = rospy.Time.now()
+            imu.header.frame_id = "imu_link"
+            quat = euler_to_quaternion(p.Angle[0]/180*math.pi, p.Angle[1]/180*math.pi, p.Angle[2]/180*math.pi)
+            imu.orientation = Quaternion(quat[1], quat[2], quat[3], quat[0])
+            imu.angular_velocity = Vector3(p.w[0]/180*math.pi, p.w[1]/180*math.pi, p.w[2]/180*math.pi)
+            imu.angular_velocity_covariance[0] = -1
+            imu.linear_acceleration = Vector3(p.a[0]/9.81, p.a[1]/9.81, p.a[2]/9.81)
+            imu.linear_acceleration_covariance[0] = -1
+            imu_pub.publish(imu)
 
-        # Update imu message
-        header.stamp = rospy.Time.now()
-        imu.header = header
-        quat = euler_to_quaternion(p.Angle[0], p.Angle[1], p.Angle[2])
-        imu.orientation = Quaternion(quat[1], quat[2], quat[3], quat[0])
-        imu.angular_velocity = Vector3(p.w[0], p.w[1], p.w[2])
-        imu.linear_acceleration = Vector3(p.a[0], p.a[1], p.a[2])
+            # Publish magnetic field message on ROS
+            mag.header.stamp = rospy.Time.now()
+            mag.header.frame_id = "mag_link"
+            mag.magnetic_field.x = p.h[0]
+            mag.magnetic_field.y = p.h[1]
+            mag.magnetic_field.z = p.h[2]
+            mag_pub.publish(mag)
 
-        # Publish imu message on ROS
-        imu_pub.publish(imu)
-        r.sleep()
+            r.sleep()
+            pass
         pass
