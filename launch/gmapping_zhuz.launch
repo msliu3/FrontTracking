@@ -16,7 +16,7 @@
 
   <node pkg="neo_front_following" type="base_controller.py" name="base_controller_node"></node>
 
-<!--   <node pkg="neo_front_following" type="vel_publisher.py" name="vel_cmd_node"></node> -->
+  <node pkg="neo_front_following" type="IMU_serial.py" name="imu_node"/>
 
   <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node">
     <param name="publish_tf" type="bool" value="true"/>

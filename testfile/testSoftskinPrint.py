@@ -3,11 +3,10 @@ import sys
 import time
 import numpy as np
 import DigitalDriver.ControlandOdometryDriver as CD
+
 pwd = os.path.abspath(os.path.abspath(__file__))
 father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
 sys.path.append(father_path)
-
-
 
 import SoftSkin.SoftSkin as SS
 import threading
@@ -22,13 +21,14 @@ def loop(event):
             print("------------------------------------------------")
             event.set()
 
-def loop2(ss):
 
+def loop2(ss):
     while True:
         ss.read_softskin_data(0)
+        time.sleep(0.3)
+
 
 if __name__ == '__main__':
-
     ss = SS.SoftSkin()
     cd = CD.ControlDriver()
     ss.build_base_line_data()
@@ -42,21 +42,27 @@ if __name__ == '__main__':
     thread_control_driver.start()
 
     """检测调整"""
-    ss.adjust_direction(cd, using=False)
-
+    while True:
+        ss.adjust_direction(cd, using=False)
 
     """检测解锁"""
     # ss.locking = True
     # ss.unlock()
+    # ss.is_locked = True
+    # ss.brake_control(ss.locking)
     # time.sleep(1)
 
     """检测异常"""
-    # while True:
-    #     print("start\n")
-    #     ss.detect_accident(using = True)
-    #     print("detected!\n")
-    #     time.sleep(1.5)
-    #     ss.locking = False
+
+    # print("start\n")
+    # ss.is_locked = False
+    # ss.detect_accident(using=True)
+    # ss.brake_control(ss.locking)
+    # print("detected!\n")
+    # time.sleep(1.5)
+
+    """上锁与解锁"""
+
     """
     记录数据用
     """

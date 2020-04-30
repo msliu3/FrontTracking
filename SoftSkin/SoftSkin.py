@@ -22,7 +22,7 @@ import serial.tools.list_ports
 import numpy as np
 import DigitalDriver.ControlDriver as CD
 import time
-
+import math
 
 def print_serial(port):
     print("---------------[ %s ]---------------" % port.name)
@@ -288,13 +288,19 @@ class SoftSkin(object):
             if lock_a * lock_b * lock_c == 1:
                 self.locking = 0
                 print("All unlocked!")
+                break
 
     def adjust_direction(self, control_driver, using=False):
         """using 代表用户不在使用"""
         """运行之前应运行baselinebuild"""
         add = np.ones(len(self.base_data)).reshape(1, -1)
+        radius_list = [-90, -110, -120, -135, -155, -165, 180,
+                       165, 155, 135, 120, 110, 90]
+        radius_list = np.array(radius_list)
+        omega_default = 0.3
+        control_driver.speed = 0
+        control_driver.radius = 0
         while not using:
-            self.read_softskin_data()
             if len(self.raw_data) != len(self.base_data):
                 continue
             temp_data = np.array(self.raw_data) - np.array(self.base_data)
@@ -306,20 +312,17 @@ class SoftSkin(object):
                 temp_data[temp_data < 20] = 0
                 temp_data[temp_data >= 20] = 1
                 temp_sum = add.dot(temp_data)
-                radius_list = [-90, -110, -120, -135, -155, -165, 180,
-                               165, 155, 135, 120, 110, 90]
-                radius_list = np.array(radius_list).reshape(-1, len(radius_list))
-                omega_default = 0.2
-                control_driver.speed = 0
-                control_driver.radius = 0
+                # print(temp_sum)
                 if temp_sum == 1:
                     radius_temp = temp_data.dot(radius_list)
                     control_driver.omega = radius_temp / (abs(radius_temp)) * omega_default
-                    time_for_adjust = abs(radius_temp) / omega_default
+                    time_for_adjust = math.radians(abs(radius_temp)) / omega_default
+                    print(radius_temp, time_for_adjust)
                     time.sleep(time_for_adjust)
                     control_driver.omega = 0
                     self.locking = 1
                     break
+
 
 if __name__ == '__main__':
     softskin = SoftSkin()
