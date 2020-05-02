@@ -21,7 +21,7 @@ from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 
 class ControlDriver(Thread):
 
-    def __init__(self, V=0.0, OMEGA=0.0, record_mode=False, position_mode=False, left_right=1):
+    def __init__(self, V=0.0, OMEGA=0.0, record_mode=False, left_right=1):
         """
         :param radius_wheel:
         :param record_mode:
@@ -34,7 +34,6 @@ class ControlDriver(Thread):
         self.radius_wheel = 85.00   #车轮半径/mm
         self.wheel_base = 540.00    #轮距/mm
         self.record_mode = record_mode
-        self.position_mode = position_mode
         self.speed = V  #线速度
         self.omega = OMEGA  #角速度
         self.position = [0.0, 0.0, 0.0]
@@ -78,16 +77,18 @@ class ControlDriver(Thread):
         return read_byte
 
     def change_speed(self, v, omega):
-        if (self.speed + self.omega != 0) and (v + omega == 0):
+        if(self.speed + self.omega != 0) and (v + omega == 0):
             self.stop_motor()
+        elif( (v + omega) != 0 and (self.speed + self.omega == 0)):
+            self.start_motor()
         self.speed = v
         self.omega = omega
         time.sleep(0.05)
 
     def get_wheel_speed(self):
         # 计算两轮线速度
-        # v_r = (2V + omega * wheelbase) / 2*wheel_radius
-        # v_l = (2V - omega * wheelbase) / 2*wheel_radius
+        # v_r = (2V + omega * wheelbase) / 2
+        # v_l = (2V - omega * wheelbase) / 2
         vl = (2*self.speed - self.omega * self.wheel_base / 1000) / 2
         vr = (2*self.speed + self.omega * self.wheel_base / 1000) / 2
         return vl, vr
@@ -97,7 +98,7 @@ class ControlDriver(Thread):
         rpm = speed / (2 * math.pi * self.radius_wheel / 1000) * 60
         return int(rpm)
 
-    def get_rpm_byte(self, rpm):
+    def rpm2byte(self, rpm):
         rpm_byte = [0x06, 0x00, 0x88, 0x8e]
         rpm_hex = int(rpm / 6000 * 16384)
         if rpm_hex >= 0:
@@ -127,8 +128,10 @@ class ControlDriver(Thread):
         while True:
             vl, vr = self.get_wheel_speed()
             # print("left: ", vl, "; right: ", vr)
-            left = self.get_rpm_byte(-self.speed2rpm(vl))
-            right = self.get_rpm_byte(self.speed2rpm(vr))
+            vl = self.speed2rpm(vl)
+            vr = self.speed2rpm(vr)
+            left = self.rpm2byte(vl)
+            right = self.rpm2byte(-vr)
             # print("byte_left: ", left, "byte_right: ", right)
             self.ser_l.write(bytes(left))
             self.ser_l.flush()
@@ -177,22 +180,6 @@ class ControlDriver(Thread):
             self.ser_r.reset_input_buffer()
         pass
 
-    def control_part_positionmode(self):
-        # This part is not yet completed
-        print("\n===================================== Start position control ! =====================================")
-        start = [0x00, 0x00, 0x01, 0x01]
-        pc_mode = [0x02, 0x00, 0xd0, 0xd2]
-        end = [0x00, 0x00, 0x00, 0x00]
-        self.ser_l.write(bytes(start))
-        self.ser_l.read(2)
-        self.ser_r.write(bytes(start))
-        self.ser_r.read(2)
-        self.ser_l.write(bytes(pc_mode))
-        self.ser_l.read(2)
-        self.ser_r.write(bytes(pc_mode))
-        self.ser_r.read(2)
-        pass
-
     def start_motor(self):
         start = [0x00, 0x00, 0x01, 0x01]
         pc_mode = [0x02, 0x00, 0xc4, 0xc6]
@@ -215,23 +202,19 @@ class ControlDriver(Thread):
         self.ser_l.read(2)
         self.ser_r.write(bytes(end))
         self.ser_r.read(2)
-
         # 读取一帧驱动器监控信息
         read_byte_l = self.read_monitor(self.ser_l)
         read_byte_r = self.read_monitor(self.ser_r)
 
         self.is_stopped = True
 
-    def ext_brake(self, command):
+    def ext_brake(self):
         self.speed = 0
         self.omega = 0
         pass
 
     def run(self):
-        if self.position_mode:
-            self.control_part_positionmode()
-        else:
-            self.control_part_speedmode()
+        self.control_part_speedmode()
 
     pass
 
@@ -242,8 +225,7 @@ def callback_vel(vel, cd):
     omega = vel.angular.z
     if (speed != cd.speed) or (omega != cd.omega):
         # if velocity command is not zero and motors are stopped, start it
-        if cd.is_stopped and (speed+omega != 0):
-            cd.start_motor()
+        print('Speed: %.3f, Omega: %.3f' % (speed, omega))
         cd.change_speed(speed, omega)
     else:
         pass
@@ -285,7 +267,7 @@ if __name__ == '__main__':
         theta = pos[2]
         dtheta = theta - pos_p[2]
         vtheta = dtheta / dt
-        print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
+        # print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
         # theta euler -> quaternion
         odom_quat = Quaternion()
         odom_quat.w = math.cos(0.5*theta)
