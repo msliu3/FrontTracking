@@ -59,6 +59,7 @@ class Config:
     # 在传感器数据中，最小的包长度是11个字节
     minPackageLen = 11
 
+
 # 传感器数据读取类
 class SensorReader:
     def __init__(self):
@@ -395,11 +396,19 @@ def euler_to_quaternion(roll, pitch, yaw):
     z = math.cos(roll/2) * math.cos(yaw/2) * math.sin(pitch/2) - math.sin(roll/2) * math.sin(yaw/2) * math.cos(pitch/2)
     return [w, x, y, z]
 
+
 def quaternion_to_euler(w, x, y, z):
     roll = math.atan(2*(w*x+y*z) / (1-2*(x**2+y**2)))
     pitch = math.atan(2*(w*z + x*y) / (1-2*(z**2+y**2)))
     yaw = math.atan(2*(w*y-x*z))
     return [roll, pitch, yaw]
+
+
+def imu_callback(imu, pub):
+    imu_temp = Imu()
+    imu_temp = imu
+    pub.publish(imu_temp)
+
 
 # 主线程
 if __name__ == '__main__':
@@ -421,27 +430,31 @@ if __name__ == '__main__':
         from std_msgs.msg import Header
         from sensor_msgs.msg import Imu, MagneticField
         from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
-        print("success")
+        # print("success")
         rospy.init_node('imu_node')
         r = rospy.Rate(10)
-        imu = Imu()
+        imu_raw = Imu()
         mag = MagneticField()
         header = Header()
         header.frame_id = "imu_link"
-        imu_pub = rospy.Publisher("imu/data_raw", Imu, queue_size=10)
+        imu_raw_pub = rospy.Publisher("imu/data_raw", Imu, queue_size=10)
         mag_pub = rospy.Publisher("imu/mag", MagneticField, queue_size=10)
+        # Cartographer subscribes to topic "imu", whereas the madgwick_filter publish "imu/data"
+        # Here we echo the "imu/data" topic and publish it as topic "imu"
+        # imu_pub = rospy.Publisher("imu", Imu, queue_size=10)
+        # imu_sub = rospy.Subscriber("imu/data", Imu, imu_callback, imu_pub)
 
         while not rospy.is_shutdown():
             # Publish imu message on ROS
-            imu.header.stamp = rospy.Time.now()
-            imu.header.frame_id = "imu_link"
+            imu_raw.header.stamp = rospy.Time.now()
+            imu_raw.header.frame_id = "imu_link"
             quat = euler_to_quaternion(p.Angle[0]/180*math.pi, p.Angle[1]/180*math.pi, p.Angle[2]/180*math.pi)
-            imu.orientation = Quaternion(quat[1], quat[2], quat[3], quat[0])
-            imu.angular_velocity = Vector3(p.w[0]/180*math.pi, p.w[1]/180*math.pi, p.w[2]/180*math.pi)
-            imu.angular_velocity_covariance[0] = -1
-            imu.linear_acceleration = Vector3(p.a[0]/9.81, p.a[1]/9.81, p.a[2]/9.81)
-            imu.linear_acceleration_covariance[0] = -1
-            imu_pub.publish(imu)
+            imu_raw.orientation = Quaternion(quat[1], quat[2], quat[3], quat[0])
+            imu_raw.angular_velocity = Vector3(p.w[0]/180*math.pi, p.w[1]/180*math.pi, p.w[2]/180*math.pi)
+            imu_raw.angular_velocity_covariance[0] = -1
+            imu_raw.linear_acceleration = Vector3(p.a[0]/9.81, p.a[1]/9.81, p.a[2]/9.81)
+            imu_raw.linear_acceleration_covariance[0] = -1
+            imu_raw_pub.publish(imu_raw)
 
             # Publish magnetic field message on ROS
             mag.header.stamp = rospy.Time.now()
