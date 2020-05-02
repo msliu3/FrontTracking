@@ -42,8 +42,12 @@ class ControlDriver(Thread):
         driver = DsD.DigitalServoDriver()
         self.left_right = left_right
         baud_rate = driver.baud_rate
-        self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.05)    #左轮串口
-        self.ser_r = serial.Serial(driver.right, baud_rate, timeout=0.05)   #右轮串口
+        if left_right == 1:
+            self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.05)    #左轮串口
+            self.ser_r = serial.Serial(driver.right, baud_rate, timeout=0.05)   #右轮串口
+        else:
+            self.ser_l = serial.Serial(driver.right, baud_rate, timeout=0.05)  # 左轮串口
+            self.ser_r = serial.Serial(driver.left, baud_rate, timeout=0.05)  # 右轮串口
         # self.MCU = serial.Serial("/dev/ttyACM0", baud_rate=9600, timeout=1) #Arduino
         self.monitor_l = DM.DriverMonitor()
         self.monitor_r = DM.DriverMonitor()
@@ -130,8 +134,8 @@ class ControlDriver(Thread):
             # print("left: ", vl, "; right: ", vr)
             vl = self.speed2rpm(vl)
             vr = self.speed2rpm(vr)
-            left = self.rpm2byte(vl)
-            right = self.rpm2byte(-vr)
+            left = self.rpm2byte(-vl)
+            right = self.rpm2byte(vr)
             # print("byte_left: ", left, "byte_right: ", right)
             self.ser_l.write(bytes(left))
             self.ser_l.flush()
@@ -143,13 +147,6 @@ class ControlDriver(Thread):
             try:
                 read_byte_l = self.read_monitor(self.ser_l)
                 read_byte_r = self.read_monitor(self.ser_r)
-
-                if self.left_right == 1:
-                    self.motorStatus_l = self.monitor_l.processData(read_byte_r)
-                    self.motorStatus_r = self.monitor_r.processData(read_byte_l)
-                else:
-                    self.motorStatus_l = self.monitor_l.processData(read_byte_l)
-                    self.motorStatus_r = self.monitor_r.processData(read_byte_r)
 
                 Odo_l = self.motorStatus_l['FeedbackPosition']
                 Odo_r = self.motorStatus_r['FeedbackPosition']
