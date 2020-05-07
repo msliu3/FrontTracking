@@ -57,7 +57,7 @@ class SoftSkin(object):
         baud_rate = 115200
         print(port_name, baud_rate)
         self.serial = serial.Serial(port_name, baud_rate, timeout=None)
-
+        # self.serial = serial.Serial(port_name, baud_rate, timeout=0.3)
         self.raw_data = []  # 保存一帧数据
         self.base_data = []  # 建立一组基准值用于初始化
 
@@ -108,15 +108,16 @@ class SoftSkin(object):
         """
         base_list = []
         for i in range(initial_size):
-            self.read_softskin_data()
+            self.read_softskin_data(0)
             if len(self.raw_data) == 13:
                 temp_raw_data = self.raw_data
-                temp_max = max(temp_raw_data)
-                temp_min = min(temp_raw_data)
-                if temp_min * 2 < temp_max:
-                    continue
-                else:
-                    base_list += temp_raw_data
+                # temp_max = max(temp_raw_data)
+                # temp_min = min(temp_raw_data)
+                # if temp_min * 2 < temp_max:
+                #     continue
+                # else:
+                #     base_list += temp_raw_data
+                base_list += temp_raw_data
         mean_base_list = np.array(base_list).reshape([-1, 13])
         add_col = np.ones(mean_base_list.shape[0]).reshape([1, -1])
         mean_base_list = add_col.dot(mean_base_list) / mean_base_list.shape[0]
@@ -227,55 +228,75 @@ class SoftSkin(object):
         if command:
             if not self.is_locked:
                 self.serial.write(bytes('B', encoding='utf-8'))
-                self.read_softskin_data()
+                # self.read_softskin_data()
                 self.is_locked = True
         else:
             if self.is_locked:
                 self.serial.write(bytes('R', encoding='utf-8'))
-                self.read_softskin_data()
+                # self.read_softskin_data()
                 self.is_locked = False
             pass
+        self.serial.flushOutput()
 
-    def detect_accident(self, using=True):
+    def detect_accident(self, using = True):
         """using 代表用户正在使用"""
         """运行之前应运行baselinebuild"""
         add = np.ones(len(self.base_data)).reshape(1, -1)
-        while using and not self.locking:
-            # print('detecting')
-            # self.read_softskin_data()
-            if len(self.raw_data) != len(self.base_data):
-                continue
-            temp_data = np.array(self.raw_data) - np.array(self.base_data)
-            max_pressure = temp_data.max()
-            if max_pressure > 165:
-                self.locking = True
-                print(max_pressure)
-                continue
-            else:
+        front_part_list = [0, 0, 0, 1, 1, 1, 1,
+                           1, 1, 1, 0, 0, 0]
+        front_part_list = np.array(front_part_list)
+        while using:
+            self.read_softskin_data(0)
+            if len(self.raw_data) == len(self.base_data):
+                temp_data = np.array(self.raw_data) - np.array(self.base_data)
+                max_pressure = temp_data.max()
+                if max_pressure > 165:
+                    self.locking = True
+                    print(max_pressure)
+                    break
+                else:
+                    temp_data[temp_data < 15] = 0
+                    temp_data[temp_data >= 15] = 1
+                    temp_sum = add.dot(temp_data)
+                    front_sum = front_part_list.dot(temp_data)
+                    if temp_sum > 4 and front_sum > 0:
+                        print(temp_sum, front_sum)
+                        self.locking = True
+                        break
+
+    def stop_ssl(self, SSLrunning = True):
+        add = np.ones(len(self.base_data)).reshape(1, -1)
+        while SSLrunning:
+            self.read_softskin_data(0)
+            if len(self.raw_data) == len(self.base_data):
+                temp_data = np.array(self.raw_data) - np.array(self.base_data)
                 temp_data[temp_data < 15] = 0
                 temp_data[temp_data >= 15] = 1
                 temp_sum = add.dot(temp_data)
-                print(temp_sum)
-                if temp_sum > 4:
+                if temp_sum > 0:
                     self.locking = True
-                    continue
+                    print("SSL stop! Walker ready!")
+                    break
+
 
     def unlock(self):
         lock_a = 0
         lock_b = 0
         lock_c = 0
         add = np.ones(len(self.base_data)).reshape(1, -1)
-        while self.locking:
+        while self.is_locked:
+            # print("processing")
+            self.read_softskin_data(0)
             if len(self.raw_data) != len(self.base_data):
                 continue
             temp_data = np.array(self.raw_data) - np.array(self.base_data)
-            temp_data[temp_data < 20] = 0
-            temp_data[temp_data >= 20] = 1
+            temp_data[temp_data < 15] = 0
+            temp_data[temp_data >= 15] = 1
             temp_sum = add.dot(temp_data)
-            position = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-            position = np.array(position)
-            position = position.dot(temp_data)
-            print(temp_sum, position)
+            # position = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+            # position = np.array(position)
+            # position = position.dot(temp_data)
+            # print(temp_sum, position)
             if temp_data[0] == 1 and temp_sum == 1 and not lock_a:
                 lock_a = 1
                 print("LOCK A unlocked")
@@ -286,7 +307,7 @@ class SoftSkin(object):
                 lock_c = 1
                 print("LOCK C unlocked")
             if lock_a * lock_b * lock_c == 1:
-                self.locking = 0
+                self.locking = False
                 print("All unlocked!")
                 break
 

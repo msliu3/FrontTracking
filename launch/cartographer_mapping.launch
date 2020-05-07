@@ -2,7 +2,7 @@
 <launch>
 
   <node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode" output="screen">
-        <param name="serial_port"         type="string" value="/dev/ttyUSB0"/>
+        <param name="serial_port"         type="string" value="/dev/ttyUSB1"/>
         <param name="serial_baudrate"     type="int"    value="115200"/>
         <param name="frame_id"            type="string" value="laser"/>
         <param name="inverted"            type="bool"   value="false"/>
@@ -17,7 +17,7 @@
 
   <node pkg="neo_front_following" type="IMU_serial.py" name="imu_node"/>
 
-<!--   <node pkg="neo_front_following" type="XboxController_zhuz.py" name="xbox_controller_node"/> -->
+  <node pkg="neo_front_following" type="XboxController_zhuz.py" name="xbox_controller_node"/>
 
   <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"></node>
 
@@ -40,8 +40,8 @@
   </node>
 
 <!--   set up data playback from bag -->
-  <param name="/use_sim_time" value="false"/>
-  <node pkg="rviz" type="rviz" name="rviz"/>
+<!--   <param name="/use_sim_time" value="false"/> -->
+<!--   <node pkg="rviz" type="rviz" name="rviz"/> -->
 
 <!--   If we want to use /tf messages, remove the "robot_description",  -->
 <!--   "robot_state_publisher" node, and lines start with "-urdf" -->

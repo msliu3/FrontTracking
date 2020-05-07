@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 """
-@File    :   test_IMU.py    
+@File    :   test_base_controller.py
 @Contact :   liumingshanneo@163.com
 
 @Modify Time      @Author    @Version
@@ -154,7 +154,8 @@ class ControlDriver(Thread):
             try:
                 read_byte_l = self.read_monitor(self.ser_l)
                 read_byte_r = self.read_monitor(self.ser_r)
-
+                self.motorStatus_l = self.monitor_l.processData(read_byte_l)
+                self.motorStatus_r = self.monitor_r.processData(read_byte_r)
                 Odo_l = self.motorStatus_l['FeedbackPosition']
                 Odo_r = self.motorStatus_r['FeedbackPosition']
 
@@ -223,6 +224,6 @@ class ControlDriver(Thread):
     pass
 
 if __name__ == "__main__":
-    cd = ControlDriver(left_right=1, V = 0.0, OMEGA=-0.1, record_mode=False)
+    cd = ControlDriver(left_right=0, V=0.0, OMEGA=0.0, record_mode=False)
     cd.start()
 

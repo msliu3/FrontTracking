@@ -22,35 +22,42 @@ def loop(event):
             event.set()
 
 
-def loop2(ss):
-    while True:
-        ss.read_softskin_data(0)
-        time.sleep(0.3)
+
+
 
 
 if __name__ == '__main__':
     ss = SS.SoftSkin()
     cd = CD.ControlDriver()
     ss.build_base_line_data()
-    event = threading.Event()
-    event.clear()
-    p1 = threading.Thread(target=loop, args=(event,))
-    p1.start()
-    p2 = threading.Thread(target=loop2, args=(ss,))
-    p2.start()
-    thread_control_driver = threading.Thread(target=cd.control_part, args=())
-    thread_control_driver.start()
+    # event = threading.Event()
+    # event.clear()
+    # p1 = threading.Thread(target=loop, args=(event,))
+    # p1.start()
 
+    # thread_control_driver = threading.Thread(target=cd.control_part, args=())
+    # thread_control_driver.start()
+
+    cd.stopMotor()
     """检测调整"""
-    while True:
-        ss.adjust_direction(cd, using=False)
+    # while True:
+    #     ss.adjust_direction(cd, using=False)
 
-    """检测解锁"""
+    # """检测解锁"""
+    # time.sleep(2)
+    # print("time to sleep")
+    #
+    # # ss.locking = False
+    # # ss.is_locked = True
+    # # ss.brake_control(ss.locking)
+    #
     # ss.locking = True
-    # ss.unlock()
-    # ss.is_locked = True
+    # ss.is_locked = False
     # ss.brake_control(ss.locking)
-    # time.sleep(1)
+    # ss.is_locked = True
+    # ss.unlock()
+    # ss.brake_control(ss.locking)
+
 
     """检测异常"""
 
@@ -60,8 +67,26 @@ if __name__ == '__main__':
     # ss.brake_control(ss.locking)
     # print("detected!\n")
     # time.sleep(1.5)
+    # time.sleep(0.5)
+    # print("yes")
+    # ss.locking = False
+    # ss.is_locked = True
+    # ss.brake_control(ss.locking)
 
-    """上锁与解锁"""
+    """终止SSL"""
+
+    # print("start\n")
+    # ss.is_locked = False
+    # ss.stop_ssl(SSLrunning=True)
+    # ss.brake_control(ss.locking)
+    # print("detected!\n")
+    # time.sleep(1.5)
+    # time.sleep(0.5)
+    # print("yes")
+    # ss.locking = False
+    # ss.is_locked = True
+    # ss.brake_control(ss.locking)
+
 
     """
     记录数据用

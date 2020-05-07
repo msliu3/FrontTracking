@@ -11,17 +11,19 @@ from threading import Thread
 from DigitalDriver import DigitalServoDriver_linux as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
 from DigitalDriver import WheelEncoderOdometry as odo
+from DigitalDriver import OdometryIMU_zhuz as odo_imu
 import serial
 import math
 
 import rospy
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 
 
 class ControlDriver(Thread):
 
-    def __init__(self, V=0.0, OMEGA=0.0, record_mode=False, left_right=1):
+    def __init__(self, V=0.0, OMEGA=0.0, yaw=0.0, record_mode=False, left_right=1):
         """
         :param radius_wheel:
         :param record_mode:
@@ -37,6 +39,7 @@ class ControlDriver(Thread):
         self.speed = V  #线速度
         self.omega = OMEGA  #角速度
         self.position = [0.0, 0.0, 0.0]
+        self.position_imu = [0.0, 0.0, 0.0]
         self.count = 0
         self.is_stopped = record_mode
         driver = DsD.DigitalServoDriver()
@@ -48,11 +51,11 @@ class ControlDriver(Thread):
         else:
             self.ser_l = serial.Serial(driver.right, baud_rate, timeout=0.05)  # 左轮串口
             self.ser_r = serial.Serial(driver.left, baud_rate, timeout=0.05)  # 右轮串口
-        # self.MCU = serial.Serial("/dev/ttyACM0", baud_rate=9600, timeout=1) #Arduino
         self.monitor_l = DM.DriverMonitor()
         self.monitor_r = DM.DriverMonitor()
         self.plot_x = [0.0]
         self.plot_y = [0.0]
+        self.imu_yaw = yaw
 
         # 初始化时读取一次驱动器监控信息，记录初始时encoder位置
         read_byte_l = self.read_monitor(self.ser_l)
@@ -69,6 +72,7 @@ class ControlDriver(Thread):
         print('init: ', Odo_l_init, Odo_r_init)
         print('-------------------------------------------------------------------------------------------------------')
         self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
+        self.odo_imu = odo_imu.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
         # time.sleep(2)
 
     def read_monitor(self, ser):
@@ -81,10 +85,12 @@ class ControlDriver(Thread):
         return read_byte
 
     def change_speed(self, v, omega):
-        if(self.speed + self.omega != 0) and (v + omega == 0):
-            self.stop_motor()
-        elif( (v + omega) != 0 and (self.speed + self.omega == 0)):
+        if self.is_stopped and v+omega!=0:
             self.start_motor()
+        # if(self.speed + self.omega != 0) and (v + omega == 0):
+        #     self.stop_motor()
+        # elif( (v + omega) != 0 and (self.speed + self.omega == 0)):
+        #     self.start_motor()
         self.speed = v
         self.omega = omega
         time.sleep(0.05)
@@ -147,12 +153,14 @@ class ControlDriver(Thread):
             try:
                 read_byte_l = self.read_monitor(self.ser_l)
                 read_byte_r = self.read_monitor(self.ser_r)
-
+                self.motorStatus_l = self.monitor_l.processData(read_byte_l)
+                self.motorStatus_r = self.monitor_r.processData(read_byte_r)
                 Odo_l = self.motorStatus_l['FeedbackPosition']
                 Odo_r = self.motorStatus_r['FeedbackPosition']
 
                 # 更新位置
                 self.position = self.odo.updatePose(-Odo_l, Odo_r)
+                self.position_imu = self.odo_imu.updatePose(-Odo_l, Odo_r, self.imu_yaw)
                 # print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm; THETA=', self.position[2] / math.pi * 180, '°;')
 
                 if math.sqrt((self.position[0] - self.plot_x[-1]) ** 2 + (self.position[1] - self.plot_y[-1]) ** 2) > 0.1:
@@ -171,7 +179,7 @@ class ControlDriver(Thread):
                 #     time.time(), self.odo.get_dxdydtheta()[0], self.odo.get_dxdydtheta()[1], self.odo.getROS_XYTHETA()[0],
                 #     self.odo.getROS_XYTHETA()[1]))
             except IndexError as i:
-                print(i,"except")
+                print(i, "except")
 
             self.ser_l.reset_input_buffer()
             self.ser_r.reset_input_buffer()
@@ -213,6 +221,10 @@ class ControlDriver(Thread):
     def run(self):
         self.control_part_speedmode()
 
+    def __del__(self):
+        self.stop_motor()
+        pass
+
     pass
 
 
@@ -228,9 +240,23 @@ def callback_vel(vel, cd):
         pass
 
 
+def quaternion_to_euler(w, x, y, z):
+    roll = math.atan(2*(w*x+y*z) / (1-2*(x**2+y**2)))
+    pitch = math.atan(2*(w*z + x*y) / (1-2*(z**2+y**2)))
+    yaw = math.atan(2*(w*y-x*z))
+    return [roll, pitch, yaw]
+
+
+def imu_callback(imu, cd):
+    cd.imu_yaw = quaternion_to_euler(imu.orientation.w,
+                                     imu.orientation.x,
+                                     imu.orientation.y,
+                                     imu.orientation.z)[2]
+
+
 if __name__ == '__main__':
 
-    cd = ControlDriver(V=0.0, OMEGA=0.0, left_right=1, record_mode=True)
+    cd = ControlDriver(V=0.0, OMEGA=0.0, left_right=0, record_mode=True)
     cd.start()
 
     # while True:
@@ -240,12 +266,15 @@ if __name__ == '__main__':
 
     rospy.init_node('base_controller_node')
     r = rospy.Rate(10)
-    # the velocity command subscriber subscribes to "/cmd_vel" topic
+
     vel_sub = rospy.Subscriber("cmd_vel", Twist, callback_vel, cd)
-    # the odometry publisher publish topic "/odom"
     odom_pub = rospy.Publisher("odom", Odometry, queue_size=10)
+    odom_imu_pub = rospy.Publisher("odom/imu", Odometry, queue_size=10)
+    imu_sub = rospy.Subscriber("imu/data", Imu, imu_callback, cd)
+
     odom = Odometry()
     pos_p = cd.odo.getROS_XYTHETA()
+    pos_imu_p = cd.odo_imu.getROS_XYTHETA()
     last_time = rospy.Time.now()
 
     while not rospy.is_shutdown():
@@ -254,7 +283,9 @@ if __name__ == '__main__':
         # dt is a Duration() class, convert to float
         dt = dt.to_sec()
         pos = cd.odo.getROS_XYTHETA()
+        pos_imu = cd.odo_imu.getROS_XYTHETA()
 
+        # Publish raw odometry data by the topic "/odom"
         x = pos[0]
         dx = x - pos_p[0]
         vx = dx / dt
@@ -279,6 +310,32 @@ if __name__ == '__main__':
         odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
         # publish the message
         odom_pub.publish(odom)
+
+        # Publish odometry data corrected by IMU by the topic "/odom/imu"
+        x = pos_imu[0]
+        dx = x - pos_imu_p[0]
+        vx = dx / dt
+        y = pos_imu[1]
+        dy = y - pos_imu_p[1]
+        vy = dy / dt
+        theta = pos_imu[2]
+        dtheta = theta - pos_imu_p[2]
+        vtheta = dtheta / dt
+        # print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
+        # theta euler -> quaternion
+        odom_quat = Quaternion()
+        odom_quat.w = math.cos(0.5 * theta)
+        odom_quat.z = math.sin(0.5 * theta)
+        # publish Odometry over ROS
+        odom.header.stamp = current_time
+        odom.header.frame_id = "odom/imu"
+        # set the position
+        odom.pose.pose = Pose(Point(x, y, 0.), odom_quat)
+        # set velocity
+        odom.child_frame_id = "base_link"
+        odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
+        # publish the message
+        odom_imu_pub.publish(odom)
 
         last_time = current_time
         pos_p = pos

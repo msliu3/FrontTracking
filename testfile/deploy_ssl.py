@@ -779,7 +779,7 @@ def SSLturning(cd, angle):
     # print('final position: ', cd.position[2])
 
 
-def loop_record(control, source='test'):
+def loop_record(control, event, source='test'):
     device_index = -1
 
     p = pyaudio.PyAudio()
@@ -830,6 +830,7 @@ def loop_record(control, source='test'):
 
     # steps
     while True:
+        event.wait()
         print("===== %d =====" % saved_count)
         map.print_walker_status()
         map.detect_which_region()

@@ -1,28 +1,25 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from DigitalDriver import ControlDriver as CD
 import math
 
 class Odometry:
-    def __init__(self, X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0, tick_threshold=0 ,plot=False):
+    def __init__(self, X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0, tick_threshold=0, plot=False):
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
         self.d_theta = 0.0
         self.d_l, self.d_r = 0.0, 0.0
         self.p_l, self.p_r = 0, 0
+        self.imu_p = 0.0
         self.Radius = 0.0
         self.X, self.Y = X, Y
         self.dX, self.dY = 0.0, 0.0
         self.plot = plot
         self.THETA = THETA
-        self.tick_threshold = tick_threshold
         self.dx, self.dy = 0.0, 0.0  # Walker坐标系下的坐标变化
+        self.tick_threshold = tick_threshold
         print('X=', self.X, 'm;  Y=', self.Y, 'm;  THETA=', self.THETA / math.pi * 180, '°')
 
     # 更新里程计读取到的信息
-    def updatePose(self, Odo_l, Odo_r):
+    def updatePose(self, Odo_l, Odo_r, imu):
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
         print("Digital distance:",self.Odo_l,self.Odo_r)
-
         # 计算两轮相对于上一时刻的位移
         if abs(self.Odo_l - self.p_l) >= self.tick_threshold:
             self.d_l = ((self.Odo_l - self.p_l) / 4096) * 2 * math.pi * 0.085
@@ -33,13 +30,13 @@ class Odometry:
         else:
             self.d_r = 0
         # print('Left displacement: ', self.d_l, 'm;  Right displacement: ', self.d_r, 'm;')
-
+        # 计算dθ，逆时针为正，顺时针为负
+        self.d_theta = imu - self.imu_p
         # 保存此时刻编码器数据
         self.p_l = self.Odo_l
         self.p_r = self.Odo_r
+        self.imu_p = imu
 
-        # 计算dθ，逆时针为正，顺时针为负
-        self.d_theta = (self.d_r - self.d_l) / 0.54  # 左转>0, 右转<0
         # 更新朝向角θ（θ∈(-π，π]）
         self.THETA += self.d_theta
         if self.THETA > math.pi:
@@ -103,10 +100,3 @@ class Odometry:
 
     def getTurningRadius(self):
         return self.Radius
-
-
-if __name__ == "__main__":
-    # odo = Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0)
-    # newPos = odo.updatePose(4096, 0)
-    # print('X:', newPos[0], 'm;   Y:', newPos[1], 'm;   THETA:', newPos[2] / math.pi * 180, '°;')
-    pass
