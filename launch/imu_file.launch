@@ -20,10 +20,7 @@
       <param name="reverse_tf" type="bool" value="false"/>
   </node>
 
-<!--   <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"> -->
-<!--     <param name="publish_tf" type="bool" value="true"/> -->
-<!--   </node> -->
-
-  <node pkg="rviz" type="rviz" name="rviz"/>
+  <node pkg="rviz" type="rviz" name="rviz" required="true"
+        args="-d $(find neo_front_following)/src/imu_demo.rviz"/>
 
 </launch>

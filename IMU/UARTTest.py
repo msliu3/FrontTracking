@@ -1,16 +1,4 @@
-#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-
-import os, sys
-pwd = os.path.abspath(os.path.abspath(__file__))
-father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
-sys.path.append(father_path)
-print(type(pwd))
-print(father_path)
-
-import math
-
-
 # 维特的WT901传感器 数据读取实例程序，
 # 串口协议规定11个字节一个数据包，包头两个字节，包尾一个字节的检验码，中间8个字节存放回传的实际数据
 # 从现有的资料来看，JY901的串口协议与WT901的串口协议应该是一样的
@@ -48,7 +36,6 @@ def detect_serials(description="target device", vid=0x10c4, pid=0xea60):
         else:
             print("Cannot find the target device: %s" % description)
     return None
-
 
 # 配置类
 class Config:
@@ -98,7 +85,6 @@ class SensorReader:
     def start(self):
         # 开始数据读取线程
         t = threading.Thread(target=self.receive)
-        print("start reading...")
         # 将当前线程设为子线程t的守护线程，这样一来，当前线程结束时会强制子线程结束
         t.setDaemon(True)
         self.working = True
@@ -111,31 +97,12 @@ class SensorReader:
 
 # 数据解析类
 class DataParser:
-    def __init__(self, sensorReader, myUI, displauUI=False):
+    def __init__(self, sensorReader, myUI):
         self.r = sensorReader
         self.u = myUI
-        self.displayUI = displauUI
         self.working = False
         self.TimeStart = datetime.now()
         self.iniVariable()
-
-    # 初始化解析丰关的变量
-    def iniVariable(self):
-        self.ChipTime = [0, 0, 0, 0, 0, 0, 0]
-        self.a = [0, 0, 0, 0]
-        self.w = [0, 0, 0, 0]
-        self.Angle = [0, 0, 0, 0]
-        self.h = [0, 0, 0, 0]
-        self.Port = [0, 0, 0, 0]
-        self.LastTime = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        self.Temperature = 0
-        self.Pressure = 0
-        self.Altitude = 0
-        self.GroundVelocity = 0
-        self.GPSYaw = 0
-        self.GPSHeight = 0
-        self.Longitude = 0
-        self.Latitude = 0
 
     # 流逝的毫秒数，返回浮点数
     def elapseMilliSeconds(self):
@@ -185,8 +152,7 @@ class DataParser:
                             text += '16进制原始据：' + hexStr[2:len(hexStr) - 1]
                             self.r.receiveBuffer[0:cutLen] = b''
                             # 在窗口的文本框中显示数据
-                            if self.displayUI:
-                                self.u.showData(text)
+                            self.u.showData(text)
                             # 解析数据,逐个数据包进行解析
                             for i in range(packageCount):
                                 beginIdx = int(i * Config.minPackageLen)
@@ -195,8 +161,26 @@ class DataParser:
                                 # 校验和通过了的数据包才进行解析
                                 if self.sbSumCheck(byteTemp):
                                     self.decodeData(byteTemp)
-            # print("data handled")
+
             time.sleep(0.005)
+
+    # 初始化解析丰关的变量
+    def iniVariable(self):
+        self.ChipTime = [0, 0, 0, 0, 0, 0, 0]
+        self.a = [0, 0, 0, 0]
+        self.w = [0, 0, 0, 0]
+        self.Angle = [0, 0, 0, 0]
+        self.h = [0, 0, 0, 0]
+        self.Port = [0, 0, 0, 0]
+        self.LastTime = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.Temperature = 0
+        self.Pressure = 0
+        self.Altitude = 0
+        self.GroundVelocity = 0
+        self.GPSYaw = 0
+        self.GPSHeight = 0
+        self.Longitude = 0
+        self.Latitude = 0
 
     # 解码包中的数据
     def decodeData(self, byteTemp):
@@ -324,8 +308,7 @@ class DataParser:
             self.u.showText(text)
 
         # 输出解析得到的内容
-        if self.displayUI:
-            output()
+        output()
 
     # 检查校验和
     def sbSumCheck(self, byteTemp):
@@ -350,8 +333,9 @@ class DataParser:
     def stop(self):
         self.working = False
 
+    # 图形界面类
 
-# 图形界面类
+
 class MyUI:
     def __init__(self):
         # 创建显示传感器数据的窗口
@@ -374,97 +358,40 @@ class MyUI:
         self.textBox = tk.Text(self.frameBottom, height=700, bg='white', font=('Arial', 12))
         self.textBox.place(x=4, y=4)
 
-    # 开启UI
+        # 开启UI
+
     def start(self):
         # 开启窗口主循环
         self.window.mainloop()
 
-    # 显示数据
+        # 显示数据
+
     def showData(self, data):
         self.dataBox.delete(0.0, tk.END)
         self.dataBox.insert(tk.INSERT, data)
 
-    # 显示文本
+        # 显示文本
+
     def showText(self, text):
         self.textBox.delete(0.0, tk.END)
         self.textBox.insert(tk.INSERT, text)
 
 
-def euler_to_quaternion(roll, pitch, yaw):
-    w = math.cos(roll/2) * math.cos(yaw/2) * math.cos(pitch/2) + math.sin(roll/2) * math.sin(yaw/2) * math.sin(pitch/2)
-    x = math.sin(roll/2) * math.cos(yaw/2) * math.cos(pitch/2) - math.cos(roll/2) * math.sin(yaw/2) * math.sin(pitch/2)
-    y = math.cos(roll/2) * math.sin(yaw/2) * math.cos(pitch/2) + math.sin(roll/2) * math.cos(yaw/2) * math.sin(pitch/2)
-    z = math.cos(roll/2) * math.cos(yaw/2) * math.sin(pitch/2) - math.sin(roll/2) * math.sin(yaw/2) * math.cos(pitch/2)
-    return [w, x, y, z]
-
-
-def quaternion_to_euler(w, x, y, z):
-    roll = math.atan(2*(w*x+y*z) / (1-2*(x**2+y**2)))
-    pitch = math.atan(2*(w*z + x*y) / (1-2*(z**2+y**2)))
-    yaw = math.atan(2*(w*y-x*z))
-    return [roll, pitch, yaw]
-
-
-def imu_callback(imu, pub):
-    imu_temp = Imu()
-    imu_temp = imu
-    pub.publish(imu_temp)
-
-
 # 主线程
 if __name__ == '__main__':
-    run_ROS = True
-    displayUI = False
     # 创建串口操作对象
     r = SensorReader()
+    # 开始读取数据
     r.start()
+
     # 创建UI对象
     u = MyUI()
+
     # 创建数据解析对象
-    p = DataParser(r, u, displauUI=displayUI)
+    p = DataParser(r, u)
+    # 开始解析数据
     p.start()
-    if displayUI:
-        u.start()   # 启动UI
 
-    if run_ROS:
-        import rospy
-        from std_msgs.msg import Header
-        from sensor_msgs.msg import Imu, MagneticField
-        from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
-        # print("success")
-        rospy.init_node('imu_node')
-        r = rospy.Rate(10)
-        imu_raw = Imu()
-        mag = MagneticField()
-        header = Header()
-        header.frame_id = "imu_link"
-        imu_raw_pub = rospy.Publisher("imu/data_raw", Imu, queue_size=10)
-        mag_pub = rospy.Publisher("imu/mag", MagneticField, queue_size=10)
-        # Cartographer subscribes to topic "imu", whereas the madgwick_filter publish "imu/data"
-        # Here we echo the "imu/data" topic and publish it as topic "imu"
-        # imu_pub = rospy.Publisher("imu", Imu, queue_size=10)
-        # imu_sub = rospy.Subscriber("imu/data", Imu, imu_callback, imu_pub)
+    # 启动UI
+    u.start()
 
-        while not rospy.is_shutdown():
-            # Publish imu message on ROS
-            imu_raw.header.stamp = rospy.Time.now()
-            imu_raw.header.frame_id = "imu_link"
-            quat = euler_to_quaternion(p.Angle[0]/180*math.pi, p.Angle[1]/180*math.pi, p.Angle[2]/180*math.pi)
-            imu_raw.orientation = Quaternion(quat[1], quat[2], quat[3], quat[0])
-            imu_raw.angular_velocity = Vector3(p.w[0]/180*math.pi, p.w[1]/180*math.pi, p.w[2]/180*math.pi)
-            imu_raw.angular_velocity_covariance[0] = -1
-            imu_raw.linear_acceleration = Vector3(p.a[0]/9.81, p.a[1]/9.81, p.a[2]/9.81)
-            imu_raw.linear_acceleration_covariance[0] = -1
-            imu_raw_pub.publish(imu_raw)
-
-            # Publish magnetic field message on ROS
-            mag.header.stamp = rospy.Time.now()
-            mag.header.frame_id = "mag_link"
-            mag.magnetic_field.x = p.h[0]
-            mag.magnetic_field.y = p.h[1]
-            mag.magnetic_field.z = p.h[2]
-            mag_pub.publish(mag)
-
-            r.sleep()
-            pass
-        pass

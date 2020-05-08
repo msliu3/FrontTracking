@@ -87,10 +87,15 @@ class ControlDriver(Thread):
     def change_speed(self, v, omega):
         if self.is_stopped and v+omega!=0:
             self.start_motor()
+
+        # The following lines are used if you wish to disable brake when
+        # the walker is stationary. However this could be problematic when
+        # using xbox controller.
         # if(self.speed + self.omega != 0) and (v + omega == 0):
         #     self.stop_motor()
         # elif( (v + omega) != 0 and (self.speed + self.omega == 0)):
         #     self.start_motor()
+
         self.speed = v
         self.omega = omega
         time.sleep(0.05)
@@ -240,14 +245,12 @@ def callback_vel(vel, cd):
         pass
 
 
-def quaternion_to_euler(w, x, y, z):
-    roll = math.atan(2*(w*x+y*z) / (1-2*(x**2+y**2)))
-    pitch = math.atan(2*(w*z + x*y) / (1-2*(z**2+y**2)))
-    yaw = math.atan(2*(w*y-x*z))
-    return [roll, pitch, yaw]
-
-
 def imu_callback(imu, cd):
+    def quaternion_to_euler(w, x, y, z):
+        roll = math.atan(2 * (w * x + y * z) / (1 - 2 * (x ** 2 + y ** 2)))
+        pitch = math.atan(2 * (w * z + x * y) / (1 - 2 * (z ** 2 + y ** 2)))
+        yaw = math.atan(2 * (w * y - x * z))
+        return [roll, pitch, yaw]
     cd.imu_yaw = quaternion_to_euler(imu.orientation.w,
                                      imu.orientation.x,
                                      imu.orientation.y,
@@ -259,6 +262,8 @@ if __name__ == '__main__':
     cd = ControlDriver(V=0.0, OMEGA=0.0, left_right=0, record_mode=True)
     cd.start()
 
+    second_odom = False
+
     # while True:
     #     time.sleep(0.5)
     #     (x, y, theta) = cd.odo.getROS_XYTHETA()
@@ -266,11 +271,11 @@ if __name__ == '__main__':
 
     rospy.init_node('base_controller_node')
     r = rospy.Rate(10)
-
     vel_sub = rospy.Subscriber("cmd_vel", Twist, callback_vel, cd)
     odom_pub = rospy.Publisher("odom", Odometry, queue_size=10)
-    odom_imu_pub = rospy.Publisher("odom/imu", Odometry, queue_size=10)
-    imu_sub = rospy.Subscriber("imu/data", Imu, imu_callback, cd)
+    if second_odom:
+        odom_imu_pub = rospy.Publisher("odom/imu", Odometry, queue_size=10)
+        imu_sub = rospy.Subscriber("imu/data", Imu, imu_callback, cd)
 
     odom = Odometry()
     pos_p = cd.odo.getROS_XYTHETA()
@@ -280,64 +285,48 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         current_time = rospy.Time.now()
         dt = current_time - last_time
-        # dt is a Duration() class, convert to float
-        dt = dt.to_sec()
-        pos = cd.odo.getROS_XYTHETA()
-        pos_imu = cd.odo_imu.getROS_XYTHETA()
+        dt = dt.to_sec()    # dt is a Duration() class, convert to float
 
         # Publish raw odometry data by the topic "/odom"
-        x = pos[0]
-        dx = x - pos_p[0]
-        vx = dx / dt
-        y = pos[1]
-        dy = y - pos_p[1]
-        vy = dy / dt
-        theta = pos[2]
-        dtheta = theta - pos_p[2]
-        vtheta = dtheta / dt
-        # print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
-        # theta euler -> quaternion
+        pos = cd.odo.getROS_XYTHETA()
+        x, y, theta = pos[0], pos[1], pos[2]
+        dx, dy, dtheta = x-pos_p[0], y-pos_p[1], theta-pos_p[2]
+        vx, vy, vtheta = dx/dt, dy/dt, dtheta/dt
+
+        # Theta euler -> quaternion
         odom_quat = Quaternion()
         odom_quat.w = math.cos(0.5*theta)
         odom_quat.z = math.sin(0.5*theta)
         # publish Odometry over ROS
         odom.header.stamp = current_time
         odom.header.frame_id = "odom"
-        # set the position
         odom.pose.pose = Pose(Point(x, y, 0.), odom_quat)
-        # set velocity
         odom.child_frame_id = "base_link"
         odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
-        # publish the message
         odom_pub.publish(odom)
+        pos_p = pos
 
         # Publish odometry data corrected by IMU by the topic "/odom/imu"
-        x = pos_imu[0]
-        dx = x - pos_imu_p[0]
-        vx = dx / dt
-        y = pos_imu[1]
-        dy = y - pos_imu_p[1]
-        vy = dy / dt
-        theta = pos_imu[2]
-        dtheta = theta - pos_imu_p[2]
-        vtheta = dtheta / dt
-        # print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
-        # theta euler -> quaternion
-        odom_quat = Quaternion()
-        odom_quat.w = math.cos(0.5 * theta)
-        odom_quat.z = math.sin(0.5 * theta)
-        # publish Odometry over ROS
-        odom.header.stamp = current_time
-        odom.header.frame_id = "odom/imu"
-        # set the position
-        odom.pose.pose = Pose(Point(x, y, 0.), odom_quat)
-        # set velocity
-        odom.child_frame_id = "base_link"
-        odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
-        # publish the message
-        odom_imu_pub.publish(odom)
+        # if second_odom:
+        #     pos_imu = cd.odo_imu.getROS_XYTHETA()
+        #     x, y, theta = pos_imu[0], pos_imu[1], pos_imu[2]
+        #     dx, dy, dtheta = x-pos_imu_p[0], y-pos_imu_p[1], theta-pos_imu_p[2]
+        #     vx, vy, vtheta = dx/dt, dy/dt, dtheta/dt
+        #     # print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
+        #
+        #     Theta euler -> quaternion
+        #     odom_quat = Quaternion()
+        #     odom_quat.w = math.cos(0.5 * theta)
+        #     odom_quat.z = math.sin(0.5 * theta)
+        #     # publish Odometry over ROS
+        #     odom.header.stamp = current_time
+        #     odom.header.frame_id = "odom/imu"
+        #     odom.pose.pose = Pose(Point(x, y, 0.), odom_quat)
+        #     odom.child_frame_id = "base_link"
+        #     odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
+        #     odom_imu_pub.publish(odom)
+        #     pos_imu_p = pos_imu
 
         last_time = current_time
-        pos_p = pos
 
         r.sleep()

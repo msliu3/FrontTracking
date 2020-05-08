@@ -21,7 +21,7 @@ class Odometry:
     # 更新里程计读取到的信息
     def updatePose(self, Odo_l, Odo_r):
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
-        print("Digital distance:",self.Odo_l,self.Odo_r)
+        # print("Digital distance:",self.Odo_l,self.Odo_r)
 
         # 计算两轮相对于上一时刻的位移
         if abs(self.Odo_l - self.p_l) >= self.tick_threshold:
@@ -92,7 +92,7 @@ class Odometry:
         # 更新绝对坐标系下坐标变化
         self.X += self.dX
         self.Y += self.dY
-        print("X,Y,theta",self.X,self.Y,self.THETA)
+        # print("X,Y,theta",self.X,self.Y,self.THETA)
         return (self.X, self.Y, self.THETA)
 
     def getROS_XYTHETA(self):

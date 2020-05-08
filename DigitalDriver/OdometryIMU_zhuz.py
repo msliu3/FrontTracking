@@ -14,12 +14,12 @@ class Odometry:
         self.THETA = THETA
         self.dx, self.dy = 0.0, 0.0  # Walker坐标系下的坐标变化
         self.tick_threshold = tick_threshold
-        print('X=', self.X, 'm;  Y=', self.Y, 'm;  THETA=', self.THETA / math.pi * 180, '°')
+        # print('X=', self.X, 'm;  Y=', self.Y, 'm;  THETA=', self.THETA / math.pi * 180, '°')
 
     # 更新里程计读取到的信息
     def updatePose(self, Odo_l, Odo_r, imu):
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
-        print("Digital distance:",self.Odo_l,self.Odo_r)
+        # print("Digital distance:", self.Odo_l, self.Odo_r)
         # 计算两轮相对于上一时刻的位移
         if abs(self.Odo_l - self.p_l) >= self.tick_threshold:
             self.d_l = ((self.Odo_l - self.p_l) / 4096) * 2 * math.pi * 0.085
@@ -89,7 +89,7 @@ class Odometry:
         # 更新绝对坐标系下坐标变化
         self.X += self.dX
         self.Y += self.dY
-        print("X,Y,theta",self.X,self.Y,self.THETA)
+        # print("X,Y,theta",self.X,self.Y,self.THETA)
         return (self.X, self.Y, self.THETA)
 
     def getROS_XYTHETA(self):
