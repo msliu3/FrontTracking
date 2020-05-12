@@ -13,14 +13,31 @@ import threading
 import multiprocessing
 
 
-def loop(event):
+def motor(cd,event):
     while True:
+        event.wait()
+        print("motor running")
         time.sleep(1)
-        end = input("end?")
-        if end == "":
-            print("------------------------------------------------")
-            event.set()
+        cd.omega = 0
+        cd.speed = 0.1
+        cd.radius = 0
 
+
+def skin(ss,event,cd):
+    while True:
+        print("detecting stopping")
+        ss.stop_ssl(1,cd,event)
+        print("ssl stoped!")
+        time.sleep(2)
+        print("detecting locking")
+        ss.lock(cd,1)
+        time.sleep(2)
+        print("detecting unlocking")
+        ss.unlock()
+        ss.brake_control()
+        time.sleep(2)
+        cd.stopMotor()
+        # event.set()
 
 
 
@@ -30,15 +47,23 @@ if __name__ == '__main__':
     ss = SS.SoftSkin()
     cd = CD.ControlDriver()
     ss.build_base_line_data()
-    # event = threading.Event()
-    # event.clear()
-    # p1 = threading.Thread(target=loop, args=(event,))
-    # p1.start()
+    event = threading.Event()
+    event.set()
+    thread_motor = threading.Thread(target=motor, args=(cd,event,))
+    thread_skin = threading.Thread(target=skin,args=(ss,event,cd,))
+    thread_control_driver = threading.Thread(target=cd.control_part, args=())
+    thread_control_driver.start()
+    thread_motor.start()
+    thread_skin.start()
 
-    # thread_control_driver = threading.Thread(target=cd.control_part, args=())
-    # thread_control_driver.start()
+    ss.is_locked = True
+    ss.locking = False
+    time.sleep(1)
+    ss.brake_control()
 
-    cd.stopMotor()
+
+    # cd.stopMotor()
+
     """检测调整"""
     # while True:
     #     ss.adjust_direction(cd, using=False)

@@ -1,8 +1,7 @@
 <!-- xml form -->
 <launch>
-
   <node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode" output="screen">
-        <param name="serial_port"         type="string" value="/dev/ttyUSB2"/>
+        <param name="serial_port"         type="string" value="/dev/ttyUSB0"/>
         <param name="serial_baudrate"     type="int"    value="115200"/>
         <param name="frame_id"            type="string" value="laser"/>
         <param name="inverted"            type="bool"   value="false"/>
@@ -13,11 +12,12 @@
   <node pkg="tf" type="static_transform_publisher" name="base_laser_link"
       args="0.46 0 0.36 0 0 0 1  /base_link /laser 100"/>
 
-  <node pkg="neo_front_following" type="base_controller.py" name="base_controller_node"></node>
+<!--   <node pkg="neo_front_following" type="base_controller.py" name="base_controller_node"></node> -->
+  <node pkg="neo_front_following" type="CD_IMU.py" name="base_controller_node"></node>
 
   <node pkg="neo_front_following" type="IMU_serial.py" name="imu_node"/>
 
-  <node pkg="neo_front_following" type="XboxController_zhuz.py" name="xbox_controller_node"/>
+<!--   <node pkg="neo_front_following" type="XboxController_zhuz.py" name="xbox_controller_node"/> -->
 
   <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"></node>
 
@@ -39,32 +39,7 @@
         <param name="reverse_tf" type="bool" value="false"/>
   </node>
 
-<!--   set up data playback from bag -->
-<!--   <param name="/use_sim_time" value="false"/> -->
-<!--   <node pkg="rviz" type="rviz" name="rviz"/> -->
-
-<!--   If we want to use /tf messages, remove the "robot_description",  -->
-<!--   "robot_state_publisher" node, and lines start with "-urdf" -->
-<!--
-  <param name="robot_description"
-    textfile="$(find cartographer_ros)/urdf/backpack_2d.urdf" />
-
-  <node name="robot_state_publisher" pkg="robot_state_publisher"
-    type="robot_state_publisher" />
--->
-<!--   <node name="cartographer_node" pkg="cartographer_ros" -->
-<!--       type="cartographer_node" args=" -->
-<!--           -configuration_directory $(find cartographer_ros)/configuration_files -->
-<!--           -configuration_basename my_robot.lua" -->
-<!--       output="screen"> -->
-<!--     <remap from="echoes" to="horizontal_laser_2d" /> -->
-<!--   </node> -->
-
-<!--   <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros" -->
-<!--       type="cartographer_occupancy_grid_node" args="-resolution 0.05" /> -->
-
-<!--   <param name="/use_sim_time" value="false"/> -->
-<!--   <node name="rviz" pkg="rviz" type="rviz" required="true" -->
-<!--         args="-d $(find cartographer_ros)/configuration_files/my_rviz_config.rviz" /> -->
+  <param name="/use_sim_time" value="false"/>
+  <node name="rviz" pkg="rviz" type="rviz"/>
 
 </launch>

@@ -1,12 +1,12 @@
 import math
 
 class Odometry:
-    def __init__(self, X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0, tick_threshold=0, plot=False):
+    def __init__(self, X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0, yaw=0.0, tick_threshold=0, plot=False):
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
         self.d_theta = 0.0
         self.d_l, self.d_r = 0.0, 0.0
         self.p_l, self.p_r = 0, 0
-        self.imu_p = 0.0
+        self.imu_p = yaw
         self.Radius = 0.0
         self.X, self.Y = X, Y
         self.dX, self.dY = 0.0, 0.0
@@ -30,8 +30,10 @@ class Odometry:
         else:
             self.d_r = 0
         # print('Left displacement: ', self.d_l, 'm;  Right displacement: ', self.d_r, 'm;')
+
         # 计算dθ，逆时针为正，顺时针为负
         self.d_theta = imu - self.imu_p
+
         # 保存此时刻编码器数据
         self.p_l = self.Odo_l
         self.p_r = self.Odo_r

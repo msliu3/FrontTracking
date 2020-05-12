@@ -84,7 +84,7 @@ if __name__ == '__main__':
     position_control = PC.PositionControl()
     event = threading.Event()
     nn_model = DL.DeepLearningDetectCase(model_name="dnn1.ckpt")
-    cd = CD.ControlDriver()
+    cd = CD.ControlDriver(left_right=1)
     flag_stop = 1
 
     thread_ir = multiprocessing.Process(target=pd.start_Demon_for_DL, args=(queue,))

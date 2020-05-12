@@ -133,10 +133,13 @@ if __name__ == "__main__":
     pub = rospy.Publisher("cmd_vel", Twist)
     rate = rospy.Rate(10)
 
-    # while not rospy.is_shutdown():
-    while 1:
+    while not rospy.is_shutdown():
+    # while 1:
         pub.publish(twist)
         rate.sleep()
+
+    signal.SIGKILL
+
 
     # try:
     #     with Xbox360Controller(0, axis_threshold=0.2) as controller:

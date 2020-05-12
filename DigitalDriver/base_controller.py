@@ -23,23 +23,20 @@ from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 
 class ControlDriver(Thread):
 
-    def __init__(self, V=0.0, OMEGA=0.0, yaw=0.0, record_mode=False, left_right=1):
-        """
-        :param radius_wheel:
-        :param record_mode:
-        :param radius:
-        :param left_right:
-            如果发现 左右轮数据反了
-            将 0 改为 1 或 1 改为 0
-        """
+    def __init__(self, V=0.0, OMEGA=0.0, record_mode=False, left_right=1):
+        # :param radius_wheel:
+        # :param record_mode:
+        # :param radius:
+        # :param left_right:
+        #     如果发现 左右轮数据反了
+        #     将 0 改为 1 或 1 改为 0
         Thread.__init__(self)
         self.radius_wheel = 85.00   #车轮半径/mm
         self.wheel_base = 540.00    #轮距/mm
         self.record_mode = record_mode
-        self.speed = V  #线速度
-        self.omega = OMEGA  #角速度
+        self.speed = V  #线速度 m/s
+        self.omega = OMEGA  #角速度 rad/s
         self.position = [0.0, 0.0, 0.0]
-        self.position_imu = [0.0, 0.0, 0.0]
         self.count = 0
         self.is_stopped = record_mode
         driver = DsD.DigitalServoDriver()
@@ -55,7 +52,6 @@ class ControlDriver(Thread):
         self.monitor_r = DM.DriverMonitor()
         self.plot_x = [0.0]
         self.plot_y = [0.0]
-        self.imu_yaw = yaw
 
         # 初始化时读取一次驱动器监控信息，记录初始时encoder位置
         read_byte_l = self.read_monitor(self.ser_l)
@@ -72,7 +68,6 @@ class ControlDriver(Thread):
         print('init: ', Odo_l_init, Odo_r_init)
         print('-------------------------------------------------------------------------------------------------------')
         self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
-        self.odo_imu = odo_imu.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
         # time.sleep(2)
 
     def read_monitor(self, ser):
@@ -165,10 +160,10 @@ class ControlDriver(Thread):
 
                 # 更新位置
                 self.position = self.odo.updatePose(-Odo_l, Odo_r)
-                self.position_imu = self.odo_imu.updatePose(-Odo_l, Odo_r, self.imu_yaw)
-                # print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm; THETA=', self.position[2] / math.pi * 180, '°;')
+                # print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm;
+                #       THETA=', self.position[2] / math.pi * 180, '°;')
 
-                if math.sqrt((self.position[0] - self.plot_x[-1]) ** 2 + (self.position[1] - self.plot_y[-1]) ** 2) > 0.1:
+                if math.sqrt((self.position[0]-self.plot_x[-1])**2+(self.position[1]-self.plot_y[-1])**2)>0.1:
                     self.plot_x.append(self.position[0])
                     self.plot_y.append(self.position[1])
 
@@ -178,11 +173,6 @@ class ControlDriver(Thread):
                     # print('Right motor malfunction: ' + self.motorStatus_r["Malfunction"])
                     self.flag_end = 1
 
-                # print("%f\t%f\t%f\t%f" % (time.time(), math.degrees(self.odo.THETA),self.position[0],self.position[1]))
-                # print(
-                #     "%f\t%f\t%f\t%f\t%f" % (
-                #     time.time(), self.odo.get_dxdydtheta()[0], self.odo.get_dxdydtheta()[1], self.odo.getROS_XYTHETA()[0],
-                #     self.odo.getROS_XYTHETA()[1]))
             except IndexError as i:
                 print(i, "except")
 
@@ -251,6 +241,7 @@ def imu_callback(imu, cd):
         pitch = math.atan(2 * (w * z + x * y) / (1 - 2 * (z ** 2 + y ** 2)))
         yaw = math.atan(2 * (w * y - x * z))
         return [roll, pitch, yaw]
+
     cd.imu_yaw = quaternion_to_euler(imu.orientation.w,
                                      imu.orientation.x,
                                      imu.orientation.y,
@@ -262,8 +253,6 @@ if __name__ == '__main__':
     cd = ControlDriver(V=0.0, OMEGA=0.0, left_right=0, record_mode=True)
     cd.start()
 
-    second_odom = False
-
     # while True:
     #     time.sleep(0.5)
     #     (x, y, theta) = cd.odo.getROS_XYTHETA()
@@ -273,13 +262,8 @@ if __name__ == '__main__':
     r = rospy.Rate(10)
     vel_sub = rospy.Subscriber("cmd_vel", Twist, callback_vel, cd)
     odom_pub = rospy.Publisher("odom", Odometry, queue_size=10)
-    if second_odom:
-        odom_imu_pub = rospy.Publisher("odom/imu", Odometry, queue_size=10)
-        imu_sub = rospy.Subscriber("imu/data", Imu, imu_callback, cd)
-
     odom = Odometry()
     pos_p = cd.odo.getROS_XYTHETA()
-    pos_imu_p = cd.odo_imu.getROS_XYTHETA()
     last_time = rospy.Time.now()
 
     while not rospy.is_shutdown():
@@ -305,27 +289,6 @@ if __name__ == '__main__':
         odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
         odom_pub.publish(odom)
         pos_p = pos
-
-        # Publish odometry data corrected by IMU by the topic "/odom/imu"
-        # if second_odom:
-        #     pos_imu = cd.odo_imu.getROS_XYTHETA()
-        #     x, y, theta = pos_imu[0], pos_imu[1], pos_imu[2]
-        #     dx, dy, dtheta = x-pos_imu_p[0], y-pos_imu_p[1], theta-pos_imu_p[2]
-        #     vx, vy, vtheta = dx/dt, dy/dt, dtheta/dt
-        #     # print('Position:  X= %.3f, Y= %.3f, THETA= %.3f°' % (x, y, theta / math.pi * 180))
-        #
-        #     Theta euler -> quaternion
-        #     odom_quat = Quaternion()
-        #     odom_quat.w = math.cos(0.5 * theta)
-        #     odom_quat.z = math.sin(0.5 * theta)
-        #     # publish Odometry over ROS
-        #     odom.header.stamp = current_time
-        #     odom.header.frame_id = "odom/imu"
-        #     odom.pose.pose = Pose(Point(x, y, 0.), odom_quat)
-        #     odom.child_frame_id = "base_link"
-        #     odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
-        #     odom_imu_pub.publish(odom)
-        #     pos_imu_p = pos_imu
 
         last_time = current_time
 
