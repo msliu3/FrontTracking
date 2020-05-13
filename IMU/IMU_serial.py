@@ -391,17 +391,17 @@ class MyUI:
 
 
 def euler_to_quaternion(roll, pitch, yaw):
-    w = math.cos(roll/2) * math.cos(yaw/2) * math.cos(pitch/2) + math.sin(roll/2) * math.sin(yaw/2) * math.sin(pitch/2)
-    x = math.sin(roll/2) * math.cos(yaw/2) * math.cos(pitch/2) - math.cos(roll/2) * math.sin(yaw/2) * math.sin(pitch/2)
-    y = math.cos(roll/2) * math.sin(yaw/2) * math.cos(pitch/2) + math.sin(roll/2) * math.cos(yaw/2) * math.sin(pitch/2)
-    z = math.cos(roll/2) * math.cos(yaw/2) * math.sin(pitch/2) - math.sin(roll/2) * math.sin(yaw/2) * math.cos(pitch/2)
+    w = math.cos(roll/2) * math.cos(pitch/2) * math.cos(yaw/2) + math.sin(roll/2) * math.sin(pitch/2) * math.sin(yaw/2)
+    x = math.sin(roll/2) * math.cos(pitch/2) * math.cos(yaw/2) - math.cos(roll/2) * math.sin(pitch/2) * math.sin(yaw/2)
+    y = math.cos(roll/2) * math.sin(pitch/2) * math.cos(yaw/2) + math.sin(roll/2) * math.cos(pitch/2) * math.sin(yaw/2)
+    z = math.cos(roll/2) * math.cos(pitch/2) * math.sin(yaw/2) - math.sin(roll/2) * math.sin(pitch/2) * math.cos(yaw/2)
     return [w, x, y, z]
 
 
 def quaternion_to_euler(w, x, y, z):
-    roll = math.atan(2*(w*x+y*z) / (1-2*(x**2+y**2)))
-    pitch = math.atan(2*(w*z + x*y) / (1-2*(z**2+y**2)))
-    yaw = math.atan(2*(w*y-x*z))
+    roll = math.atan2(2*(w*x+y*z), 1-2*(x**2+y**2))
+    yaw = math.atan2(2*(w*z + x*y), 1-2*(z**2+y**2))
+    pitch = math.asin(2*(w*y-x*z))
     return [roll, pitch, yaw]
 
 
@@ -415,6 +415,7 @@ def imu_callback(imu, pub):
 if __name__ == '__main__':
     run_ROS = True
     displayUI = False
+    set_init_yaw_zero = True
     # 创建串口操作对象
     r = SensorReader()
     r.start()
@@ -426,18 +427,22 @@ if __name__ == '__main__':
     if displayUI:
         u.start()   # 启动UI
 
+    yaw_init = 0.0
+    if set_init_yaw_zero:
+        yaw_sum = 0.0
+        for i in range(10):
+            yaw_sum += (p.Angle[2]/180*math.pi)
+        yaw_init = yaw_sum / 10
+
     if run_ROS:
         import rospy
-        from std_msgs.msg import Header
         from sensor_msgs.msg import Imu, MagneticField
         from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
         # print("success")
         rospy.init_node('imu_node')
-        r = rospy.Rate(10)
+        r = rospy.Rate(20)
         imu_raw = Imu()
         mag = MagneticField()
-        header = Header()
-        header.frame_id = "imu_link"
         imu_raw_pub = rospy.Publisher("imu/data_raw", Imu, queue_size=10)
         mag_pub = rospy.Publisher("imu/mag", MagneticField, queue_size=10)
         # Cartographer subscribes to topic "imu", whereas the madgwick_filter publish "imu/data"
@@ -449,11 +454,19 @@ if __name__ == '__main__':
             # Publish imu message on ROS
             imu_raw.header.stamp = rospy.Time.now()
             imu_raw.header.frame_id = "imu_link"
-            quat = euler_to_quaternion(p.Angle[0]/180*math.pi, p.Angle[1]/180*math.pi, p.Angle[2]/180*math.pi)
+            quat = euler_to_quaternion(0, 0, p.Angle[2]/180*math.pi-yaw_init)
+            print("Yaw: ", p.Angle[2])
+            # quat = euler_to_quaternion(p.Angle[0]/180*math.pi,
+            #                            p.Angle[1]/180*math.pi,
+            #                            p.Angle[2]/180*math.pi-yaw_init)
             imu_raw.orientation = Quaternion(quat[1], quat[2], quat[3], quat[0])
-            imu_raw.angular_velocity = Vector3(p.w[0]/180*math.pi, p.w[1]/180*math.pi, p.w[2]/180*math.pi)
+            imu_raw.angular_velocity = Vector3(p.w[0]/180*math.pi,
+                                               p.w[1]/180*math.pi,
+                                               p.w[2]/180*math.pi)
             imu_raw.angular_velocity_covariance[0] = -1
-            imu_raw.linear_acceleration = Vector3(p.a[0]/9.81, p.a[1]/9.81, p.a[2]/9.81)
+            imu_raw.linear_acceleration = Vector3(p.a[0]/9.81,
+                                                  p.a[1]/9.81,
+                                                  p.a[2]/9.81)
             imu_raw.linear_acceleration_covariance[0] = -1
             imu_raw_pub.publish(imu_raw)
 

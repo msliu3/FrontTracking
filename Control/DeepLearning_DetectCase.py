@@ -63,7 +63,7 @@ class DeepLearningDetectCase(object):
         self.predict_result, self.logits = self.build_mode()
         self.sess = tf.Session()
         saver = tf.train.Saver()
-        print(self.model_path)
+        print("DL model path:",self.model_path)
         saver.restore(self.sess, self.model_path)
         self.dict_class = {0: "left_left",
                            1: "left_forward",
@@ -110,5 +110,5 @@ class DeepLearningDetectCase(object):
         result_, logits_ = self.sess.run([self.predict_result, self.logits],
                                          feed_dict=self.obtain_input(ir_data_sample, leg_sample))
 
-        # print("--------------", self.dict_class[int(result_)], "--------------------")
+        print("--------------", self.dict_class[int(result_)], "--------------------")
         return result_

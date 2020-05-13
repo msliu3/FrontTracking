@@ -42,7 +42,7 @@ def singleton(cls, *args, **kw):
     return _singleton
 
 
-@singleton
+# @singleton
 class LegInformation(Thread):
     def __init__(self, length=50):
         Thread.__init__(self)
@@ -161,24 +161,25 @@ class LegInformation(Thread):
                 sum_flag1 += temp_np[i]
         if sum_flag0 > sum_flag1:
             if result[-1] == 0:
-                self.left_leg_x = temp_x
-                self.left_leg_y = temp_y
+                self.left_leg_x = float(temp_x)
+                self.left_leg_y = float(temp_y)
                 # print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
             else:
-                self.right_leg_x = temp_x
-                self.right_leg_y = temp_y
+                self.right_leg_x = float(temp_x)
+                self.right_leg_y = float(temp_y)
                 # print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
         else:
             if result[-1] == 1:
-                self.left_leg_x = temp_x
-                self.left_leg_y = temp_y
+                self.left_leg_x = float(temp_x)
+                self.left_leg_y = float(temp_y)
                 # print("left: " + str(self.left_leg_x) + " " + str(self.left_leg_y))
             else:
-                self.right_leg_x = temp_x
-                self.right_leg_y = temp_y
+                self.right_leg_x = float(temp_x)
+                self.right_leg_y = float(temp_y)
                 # print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
         # print(result)
-        # print(self.left_leg_x, self.right_leg_x)
+
+        print("LegInformation:",self.left_leg_x, self.right_leg_x,id(self))
 
     def clear_leg(self):
         self.left_leg_x = 0
@@ -202,10 +203,19 @@ class LegInformation(Thread):
                 rx = self.right_leg_x
                 ry = self.right_leg_y
 
-    def loop(self):
-        leg = LegInformation()
+    def loop2(self):
+        # leg = LegInformation()
         leg.listener_pose_2D()
         leg.listener_neo_marker()
+        # It could be waste resource
+        # thread_start = threading.Thread(target=leg.detect_has_a_human, args=())
+        # thread_start.start()
+        rospy.spin()
+        pass
+    def run(self) -> None:
+        # leg = LegInformation()
+        self.listener_pose_2D()
+        self.listener_neo_marker()
         # It could be waste resource
         # thread_start = threading.Thread(target=leg.detect_has_a_human, args=())
         # thread_start.start()

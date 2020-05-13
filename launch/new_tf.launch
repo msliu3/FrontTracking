@@ -1,0 +1,9 @@
+<!-- xml form -->
+<launch>
+
+  <node pkg="tf_handler_new" type="tf_handler_new_node" name="tf_handler_new_node"></node>
+
+  <param name="/use_sim_time" value="false"/>
+  <node name="rviz" pkg="rviz" type="rviz"/>
+
+</launch>

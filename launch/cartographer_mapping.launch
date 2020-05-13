@@ -1,7 +1,7 @@
 <!-- xml form -->
 <launch>
   <node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode" output="screen">
-        <param name="serial_port"         type="string" value="/dev/ttyUSB0"/>
+        <param name="serial_port"         type="string" value="/dev/ttyUSB2"/>
         <param name="serial_baudrate"     type="int"    value="115200"/>
         <param name="frame_id"            type="string" value="laser"/>
         <param name="inverted"            type="bool"   value="false"/>
@@ -12,12 +12,13 @@
   <node pkg="tf" type="static_transform_publisher" name="base_laser_link"
       args="0.46 0 0.36 0 0 0 1  /base_link /laser 100"/>
 
-<!--   <node pkg="neo_front_following" type="base_controller.py" name="base_controller_node"></node> -->
-  <node pkg="neo_front_following" type="CD_IMU.py" name="base_controller_node"></node>
+  <node pkg="neo_front_following" type="base_controller.py" name="base_controller_node"></node>
+<!--   <node pkg="neo_front_following" type="CD_IMU.py" name="base_controller_node"></node> -->
 
   <node pkg="neo_front_following" type="IMU_serial.py" name="imu_node"/>
 
-<!--   <node pkg="neo_front_following" type="XboxController_zhuz.py" name="xbox_controller_node"/> -->
+  <node pkg="neo_front_following" type="XboxController_zhuz.py" name="xbox_controller_node"
+        required="false"/>
 
   <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"></node>
 

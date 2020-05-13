@@ -53,7 +53,7 @@ if __name__ == '__main__':
     thread_skin = threading.Thread(target=skin,args=(ss,event,cd,))
     thread_control_driver = threading.Thread(target=cd.control_part, args=())
     thread_control_driver.start()
-    thread_motor.start()
+    # thread_motor.start()
     thread_skin.start()
 
     ss.is_locked = True

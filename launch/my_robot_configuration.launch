@@ -19,6 +19,9 @@
 
   <node pkg="tf_handler" type="tf_handler_node" name="tf_handler_node"></node>
 
+   <node pkg="neo_front_following" type="XboxController_zhuz.py" name="xbox_controller_node"
+         required="false"/>
+
   <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_node">
         <param name="gain" type="double" value="0.1"/>
         <param name="zeta" type="double" value="0.0"/>

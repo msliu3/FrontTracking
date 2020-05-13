@@ -27,8 +27,9 @@ class MatchCase(object):
     def __init__(self, foot, base_size=30):
         # 打开ros，开始读取leg information
         self.leg = LegLidar.LegInformation()
-        thread_start = threading.Thread(target=self.leg.loop, args=())
-        thread_start.start()
+        # thread_start = threading.Thread(target=self.leg.loop, args=())
+        # thread_start.start()
+        self.leg.start()
         # 因为footinformation不是已独立存在的类，所以这里选用传入的方式
         # self.foot = FootInformation.FootInformation()
         self.foot = FootInformation.FootInformation()
@@ -87,7 +88,7 @@ class MatchCase(object):
         """
         self.clear_case()
         # print("foot information", self.foot.left_line, self.foot.right_line)
-        # print("Leg Information :", self.leg.left_leg_x, self.leg.right_leg_x)
+        print("Leg Information :", self.leg.left_leg_x, self.leg.right_leg_x,id(self.leg))
         if self.front == "left":
             front_x = self.leg.left_leg_x
         else:

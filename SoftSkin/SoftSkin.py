@@ -6,7 +6,7 @@
 
 @Modify Time      @Author    @Version
 ------------      -------    --------
-2020/3/4 23:50   msliu      1.0      
+2020/3/4 23:50   msliu      1.0
 
 @Description
 ------------
@@ -23,6 +23,8 @@ import numpy as np
 import DigitalDriver.ControlDriver as CD
 import time
 import math
+import threading
+
 
 def print_serial(port):
     print("---------------[ %s ]---------------" % port.name)
@@ -238,13 +240,14 @@ class SoftSkin(object):
             pass
         self.serial.flushOutput()
 
-    def detect_accident(self, using = True):
+    def detect_accident(self, cd, using = True):
         """using 代表用户正在使用"""
         """运行之前应运行baselinebuild"""
         add = np.ones(len(self.base_data)).reshape(1, -1)
         front_part_list = [0, 0, 0, 1, 1, 1, 1,
                            1, 1, 1, 0, 0, 0]
         front_part_list = np.array(front_part_list)
+        self.serial.flushInput()
         while using:
             self.read_softskin_data(0)
             if len(self.raw_data) == len(self.base_data):
@@ -260,13 +263,20 @@ class SoftSkin(object):
                     temp_sum = add.dot(temp_data)
                     front_sum = front_part_list.dot(temp_data)
                     if temp_sum > 4 and front_sum > 0:
+                        cd.omega = 0
+                        cd.speed = 0
+                        cd.radius = 0
                         print(temp_sum, front_sum)
                         self.locking = True
+                        self.brake_control(self.locking)
+                        self.is_locked = True
                         break
 
-    def stop_ssl(self, SSLrunning = True):
+    def stop_ssl(self, SSLrunning, cd, event_ssl):
         add = np.ones(len(self.base_data)).reshape(1, -1)
+
         while SSLrunning:
+            self.serial.flushInput()  # 清空上一次的Softskin的输入，否则会被继续当成输入
             self.read_softskin_data(0)
             if len(self.raw_data) == len(self.base_data):
                 temp_data = np.array(self.raw_data) - np.array(self.base_data)
@@ -276,15 +286,42 @@ class SoftSkin(object):
                 if temp_sum > 0:
                     self.locking = True
                     print("SSL stop! Walker ready!")
+                    cd.omega = 0
+                    cd.speed = 0
+                    cd.radius = 0
+                    # self.brake_control(self.locking)
+                    event_ssl.clear()
                     break
 
+    def lock(self, cd, SSLrunning = True):
+        add = np.ones(len(self.base_data)).reshape(1, -1)
+        self.serial.flushInput()
+        while SSLrunning:
+            self.read_softskin_data(0)
+            if len(self.raw_data) == len(self.base_data):
+                temp_data = np.array(self.raw_data) - np.array(self.base_data)
+                temp_data[temp_data < 15] = 0
+                temp_data[temp_data >= 15] = 1
+                temp_sum = add.dot(temp_data)
+                if temp_sum > 0:
+                    cd.omega = 0
+                    cd.speed = 0
+                    cd.radius = 0
+                    self.locking = True
+                    print("SSL stop! Walker ready!")
+                    self.brake_control(self.locking)
+                    self.is_locked = True
+                    self.read_softskin_data(0)
+                    break
 
     def unlock(self):
         lock_a = 0
         lock_b = 0
         lock_c = 0
         add = np.ones(len(self.base_data)).reshape(1, -1)
+
         while self.is_locked:
+            self.serial.flushInput()
             # print("processing")
             self.read_softskin_data(0)
             if len(self.raw_data) != len(self.base_data):
@@ -309,6 +346,7 @@ class SoftSkin(object):
             if lock_a * lock_b * lock_c == 1:
                 self.locking = False
                 print("All unlocked!")
+                self.brake_control(self.locking)
                 break
 
     def adjust_direction(self, control_driver, using=False):
@@ -362,3 +400,7 @@ if __name__ == '__main__':
     #     data = softskin.detect_all_point()
     #     print(data)
     softskin.label_front_follow()
+
+
+
+

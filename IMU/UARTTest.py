@@ -80,8 +80,7 @@ class SensorReader:
                 s = self.port.read(count)
                 self.receiveBuffer += s
 
-                # 开始工作
-
+    # 开始工作
     def start(self):
         # 开始数据读取线程
         t = threading.Thread(target=self.receive)
