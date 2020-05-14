@@ -11,7 +11,7 @@ from threading import Thread
 from DigitalDriver import DigitalServoDriver_linux as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
 from DigitalDriver import WheelEncoderOdometry as odo
-from DigitalDriver import OdometryIMU_zhuz as odo_imu
+from DigitalDriver import IMU_Odometry_zhuz as odo_imu
 import serial
 import math
 
@@ -64,7 +64,7 @@ class ControlDriver(Thread):
         self.motorStatus_r = self.monitor_r.processData(read_byte_r)
         Odo_l_init = self.motorStatus_l['FeedbackPosition']
         Odo_r_init = self.motorStatus_r['FeedbackPosition']
-        self.odo2 = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, tick_threshold=10,
+        self.odo2 = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, tick_threshold=0,
                                  Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
         self.odo = odo_imu.Odometry(X=0.0, Y=0.0, THETA=0.0, yaw=self.imu_yaw,
                                     Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
@@ -328,3 +328,8 @@ if __name__ == '__main__':
         last_time = current_time
 
         r.sleep()
+
+    print("Odometry from IMU: (%.3f, %.3f, %.3f)"
+          % (cd.position[1], -cd.position[0], cd.position[2]/math.pi*180))
+    print("Odometry from raw odometry: (%.3f, %.3f, %.3f)"
+          % (cd.position2[1], -cd.position2[0], cd.position2[2]/math.pi*180))

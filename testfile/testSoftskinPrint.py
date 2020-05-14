@@ -30,13 +30,11 @@ def skin(ss,event,cd):
         print("ssl stoped!")
         time.sleep(2)
         print("detecting locking")
-        ss.lock(cd,1)
+        # ss.lock(cd,1)
         time.sleep(2)
         print("detecting unlocking")
         ss.unlock()
-        ss.brake_control()
         time.sleep(2)
-        cd.stopMotor()
         # event.set()
 
 

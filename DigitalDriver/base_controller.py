@@ -11,6 +11,7 @@ from threading import Thread
 from DigitalDriver import DigitalServoDriver_linux as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
 from DigitalDriver import WheelEncoderOdometry as odo
+from DigitalDriver import IMU_Odometry_zhuz as odo_imu
 import serial
 import math
 
@@ -22,7 +23,7 @@ from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 
 class ControlDriver(Thread):
 
-    def __init__(self, V=0.0, OMEGA=0.0, record_mode=False, left_right=1):
+    def __init__(self, V=0.0, OMEGA=0.0, use_imu=True, yaw = 0.0, record_mode=False, left_right=1):
         # :param radius_wheel:
         # :param record_mode:
         # :param radius:
@@ -33,8 +34,10 @@ class ControlDriver(Thread):
         self.radius_wheel = 85.00   #车轮半径/mm
         self.wheel_base = 540.00    #轮距/mm
         self.record_mode = record_mode
+        self.use_imu = use_imu
         self.speed = V  #线速度 m/s
         self.omega = OMEGA  #角速度 rad/s
+        self.imu_yaw = yaw
         self.position = [0.0, 0.0, 0.0]
         self.count = 0
         self.is_stopped = record_mode
@@ -42,11 +45,11 @@ class ControlDriver(Thread):
         self.left_right = left_right
         baud_rate = driver.baud_rate
         if left_right == 1:
-            self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.05)    #左轮串口
-            self.ser_r = serial.Serial(driver.right, baud_rate, timeout=0.05)   #右轮串口
+            self.ser_l = serial.Serial(driver.left, baud_rate, timeout=0.05)
+            self.ser_r = serial.Serial(driver.right, baud_rate, timeout=0.05)
         else:
-            self.ser_l = serial.Serial(driver.right, baud_rate, timeout=0.05)  # 左轮串口
-            self.ser_r = serial.Serial(driver.left, baud_rate, timeout=0.05)  # 右轮串口
+            self.ser_l = serial.Serial(driver.right, baud_rate, timeout=0.05)
+            self.ser_r = serial.Serial(driver.left, baud_rate, timeout=0.05)
         self.monitor_l = DM.DriverMonitor()
         self.monitor_r = DM.DriverMonitor()
         self.plot_x = [0.0]
@@ -55,18 +58,23 @@ class ControlDriver(Thread):
         # 初始化时读取一次驱动器监控信息，记录初始时encoder位置
         read_byte_l = self.read_monitor(self.ser_l)
         read_byte_r = self.read_monitor(self.ser_r)
-
         # 初始化Odometry
         self.motorStatus_l = self.monitor_l.processData(read_byte_l)
         self.motorStatus_r = self.monitor_r.processData(read_byte_r)
-        print('-------------------------------------------------------------------------------------------------------')
-        print('Initial LEFT monitor: ', self.motorStatus_l)
-        print('Initial RIGHT monitor:', self.motorStatus_r)
         Odo_l_init = self.motorStatus_l['FeedbackPosition']
         Odo_r_init = self.motorStatus_r['FeedbackPosition']
-        print('init: ', Odo_l_init, Odo_r_init)
-        print('-------------------------------------------------------------------------------------------------------')
-        self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0, Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
+        if self.use_imu:
+            self.odo = odo_imu.Odometry(X=0.0, Y=0.0, THETA=0.0, yaw=self.imu_yaw,
+                                        Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
+        else:
+            self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0,
+                                    Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
+        # print('-------------------------------------------------------------------------------------------------------')
+        # print('Initial LEFT monitor: ', self.motorStatus_l)
+        # print('Initial RIGHT monitor:', self.motorStatus_r)
+        # print('init: ', Odo_l_init, Odo_r_init)
+        # print('-------------------------------------------------------------------------------------------------------')
+
         # time.sleep(2)
 
     def read_monitor(self, ser):
@@ -139,9 +147,9 @@ class ControlDriver(Thread):
             # print("left: ", vl, "; right: ", vr)
             vl = self.speed2rpm(vl)
             vr = self.speed2rpm(vr)
+            # 由于两轮安装方向分别为：左轮反装, 右轮正装, 因此左轮读写数据都需要取反
             left = self.rpm2byte(-vl)
             right = self.rpm2byte(vr)
-            # print("byte_left: ", left, "byte_right: ", right)
             self.ser_l.write(bytes(left))
             self.ser_l.flush()
             self.ser_l.read(2)
@@ -158,9 +166,12 @@ class ControlDriver(Thread):
                 Odo_r = self.motorStatus_r['FeedbackPosition']
 
                 # 更新位置
-                self.position = self.odo.updatePose(-Odo_l, Odo_r)
-                # print('Position:  X=', self.position[0], 'm;  Y=', self.position[1], 'm;
-                #       THETA=', self.position[2] / math.pi * 180, '°;')
+                if self.use_imu:
+                    self.position = self.odo.updatePose(-Odo_l, Odo_r, self.imu_yaw)
+                else:
+                    self.position = self.odo.updatePose(-Odo_l, Odo_r)
+                # print('Position:  X=%.3f;  Y=%.3f;  THETA=%.3f'
+                #       % (self.position[0], self.position[1], self.position[2]/math.pi*180))
 
                 if math.sqrt((self.position[0]-self.plot_x[-1])**2+(self.position[1]-self.plot_y[-1])**2)>0.1:
                     self.plot_x.append(self.position[0])
@@ -222,6 +233,21 @@ class ControlDriver(Thread):
     pass
 
 
+def euler_to_quaternion(roll, pitch, yaw):
+    w = math.cos(roll/2) * math.cos(pitch/2) * math.cos(yaw/2) + math.sin(roll/2) * math.sin(pitch/2) * math.sin(yaw/2)
+    x = math.sin(roll/2) * math.cos(pitch/2) * math.cos(yaw/2) - math.cos(roll/2) * math.sin(pitch/2) * math.sin(yaw/2)
+    y = math.cos(roll/2) * math.sin(pitch/2) * math.cos(yaw/2) + math.sin(roll/2) * math.cos(pitch/2) * math.sin(yaw/2)
+    z = math.cos(roll/2) * math.cos(pitch/2) * math.sin(yaw/2) - math.sin(roll/2) * math.sin(pitch/2) * math.cos(yaw/2)
+    return [w, x, y, z]
+
+
+def quaternion_to_euler(w, x, y, z):
+    roll = math.atan2(2*(w*x+y*z), 1-2*(x**2+y**2))
+    yaw = math.atan2(2*(w*z + x*y), 1-2*(z**2+y**2))
+    pitch = math.asin(2*(w*y-x*z))
+    return [roll, pitch, yaw]
+
+
 def callback_vel(vel, cd):
     # callback function to change the speed when receives /cmd_vel topic
     speed = vel.linear.x
@@ -234,9 +260,18 @@ def callback_vel(vel, cd):
         pass
 
 
+def callback_imu(imu, cd):
+    yaw = quaternion_to_euler(imu.orientation.w,
+                              imu.orientation.x,
+                              imu.orientation.y,
+                              imu.orientation.z)[2]
+    cd.imu_yaw = round(yaw, 2)
+    pass
+
+
 if __name__ == '__main__':
 
-    cd = ControlDriver(V=0.0, OMEGA=0.0, left_right=0, record_mode=True)
+    cd = ControlDriver(V=0.0, OMEGA=0.0, use_imu=False, left_right=0, record_mode=True)
     cd.start()
 
     try:
@@ -244,6 +279,8 @@ if __name__ == '__main__':
         r = rospy.Rate(20)
         vel_sub = rospy.Subscriber("cmd_vel", Twist, callback_vel, cd)
         odom_pub = rospy.Publisher("odom", Odometry, queue_size=10)
+        imu_sub = rospy.Subscriber("imu/data_raw", Imu, callback_imu, cd)
+
         odom = Odometry()
         pos_p = cd.odo.getROS_XYTHETA()
         last_time = rospy.Time.now()
@@ -256,9 +293,10 @@ if __name__ == '__main__':
             # Publish raw odometry data by the topic "/odom"
             pos = cd.odo.getROS_XYTHETA()
             x, y, theta = pos[0], pos[1], pos[2]
-            dx, dy, dtheta = x - pos_p[0], y - pos_p[1], theta - pos_p[2]
-            vx, vy, vtheta = dx / dt, dy / dt, dtheta / dt
+            dx, dy, dtheta = x-pos_p[0], y-pos_p[1], theta-pos_p[2]
+            vx, vy, vtheta = dx/dt, dy/dt, dtheta/dt
             # Theta euler -> quaternion
+            # 这里我们屏蔽掉了roll和pitch的角度
             odom_quat = Quaternion(0.0, 0.0, math.sin(0.5 * theta), math.cos(0.5 * theta))
             # publish Odometry over ROS
             odom.header.stamp = current_time
@@ -267,8 +305,8 @@ if __name__ == '__main__':
             odom.child_frame_id = "base_link"
             odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
             odom_pub.publish(odom)
-            pos_p = pos
 
+            pos_p = pos
             last_time = current_time
 
             r.sleep()

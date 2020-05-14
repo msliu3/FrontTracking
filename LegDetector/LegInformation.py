@@ -179,7 +179,7 @@ class LegInformation(Thread):
                 # print("right: " + str(self.right_leg_x) + " " + str(self.right_leg_y))
         # print(result)
 
-        print("LegInformation:",self.left_leg_x, self.right_leg_x,id(self))
+        # print("LegInformation:",self.left_leg_x, self.right_leg_x,id(self))
 
     def clear_leg(self):
         self.left_leg_x = 0

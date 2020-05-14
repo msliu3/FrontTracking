@@ -20,7 +20,7 @@ import DigitalDriver.ControlDriver as CD
 
 def loop(control):
     while True:
-        time.sleep(5)
+        time.sleep(4)
         temp = input("type: a->speed b->omega c->r clear end")
         if temp == "a":
             speed = input("speed")
@@ -45,7 +45,7 @@ def loop(control):
 if __name__ == '__main__':
 
     # t = threading.Thread(target=loop(name))
-    cd = CD.ControlDriver()
+    cd = CD.ControlDriver(left_right=1)
     p1 = threading.Thread(target=loop, args=(cd,))
     p2 = threading.Thread(target=cd.control_part, args=())
     print("hehe")

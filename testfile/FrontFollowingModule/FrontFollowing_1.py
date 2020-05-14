@@ -29,7 +29,7 @@ sys.path.append(father_path)
 import FootDetector.DemonstrationProcess as DP
 import Control.DeepLearning_DetectCase as DL
 import Control.MatchCase_NN as MC
-import DigitalDriver.ControlDriver as CD
+import DigitalDriver.ControlandOdometryDriver as CD
 import Control.PositionControl as PC
 
 import time
@@ -39,10 +39,10 @@ import threading
 import multiprocessing
 
 
-class FrontFollowing(Process):
+class FrontFollowing(threading.Thread):
     def __init__(self, ControlDriver):
         # 继承父类
-        Process.__init__(self)
+        threading.Thread.__init__(self)
 
         # self.control_driver = CD.ControlDriver()
         self.control_driver = ControlDriver
@@ -61,30 +61,34 @@ class FrontFollowing(Process):
         # 事件控制：控制机器人是否执行移动逻辑
         self.event_action_loop = threading.Event()
 
-        self.flag_stop = 1
+        self.matcher = MC.MatchCase(foot=self.ir_camera.foot)
+
+        self.stop_flag = False
         pass
 
     def stop_front_following(self):
-        self.event_action_loop.wait()
+        self.stop_flag = True
         pass
 
     def resume_front_following(self):
-        self.event_action_loop.clear()
+        self.stop_flag = False
         pass
 
     def run(self) -> None:
-        matcher = MC.MatchCase(foot=self.ir_camera.foot)
 
         thread_ir = multiprocessing.Process(target=self.ir_camera.start_Demon_for_DL, args=(self.queue,))
         thread_ir.start()
-        p1 = threading.Thread(target=self.action_loop, args=(matcher,))
+        p1 = threading.Thread(target=self.action_loop, args=(self.matcher,))
         p1.start()
-        p2 = threading.Thread(target=self.detecting_loop, args=(matcher,))  # nn_model,
+        p2 = threading.Thread(target=self.detecting_loop, args=(self.matcher,))  # nn_model,
         p2.start()
+        # while True:
+        #     time.sleep(0.5)
+        pass
 
-    def action_loop(self,matcher):
+    def action_loop(self, matcher):
         while True:
-            print("------action_loop started------")
+            # print("------action_loop started------")
             self.event_action_loop.wait()
 
             # position_control负责计算目标位置，以及如何移动过去
@@ -103,23 +107,22 @@ class FrontFollowing(Process):
                     self.position_control.action_forward_and_turning(self.control_driver)
                     matcher.clear_case()
             self.event_action_loop.clear()
-            print("------action_loop end------")
+            # print("------action_loop end------")
 
-    def detecting_loop(self,matcher):
+    def detecting_loop(self, matcher):
         nn_model = DL.DeepLearningDetectCase(model_name="dnn1.ckpt")
         while True:
             time.sleep(0.05)
             if not self.queue.empty():
-                print("------detecting_loop started------")
                 # print("into queue")
                 # matcher.clear_foot_and_leg()
                 temps = self.queue.get(block=False)
-                print("leg:",
-                      matcher.leg.left_leg_x,
-                      matcher.leg.left_leg_y,
-                      matcher.leg.right_leg_x,
-                      matcher.leg.right_leg_y
-                      )
+                # print("leg:",
+                #       matcher.leg.left_leg_x,
+                #       matcher.leg.left_leg_y,
+                #       matcher.leg.right_leg_x,
+                #       matcher.leg.right_leg_y
+                #       )
                 leg_temp = np.array(
                     [matcher.leg.left_leg_x, matcher.leg.left_leg_y, matcher.leg.right_leg_x,
                      matcher.leg.right_leg_y]).reshape([1, 4])
@@ -132,14 +135,22 @@ class FrontFollowing(Process):
                 result = nn_model.print_predict_result(ir_np, leg_np)
                 matcher.detect_front_and_back_foot()
                 x, theta = matcher.detect_case(result)
-                print(x, theta)
+                # print(x, theta)
                 self.position_control.set_expect(x, theta)
-                self.event_action_loop.set()
+                if not self.stop_flag:
+                    self.event_action_loop.set()
+
                 matcher.clear_expect()
 
 
 if __name__ == '__main__':
-    control_driver = CD.ControlDriver()
-    control_driver.start()
+    control_driver = CD.ControlDriver(left_right=1)
+    # control_driver.start()
+    t1 = threading.Thread(target=control_driver.control_part,args=())
+    t1.start()
     ff = FrontFollowing(control_driver)
     ff.start()
+    ff.stop_front_following()
+    # time.sleep(5)
+    time.sleep(10)
+    ff.resume_front_following()

@@ -9,12 +9,6 @@ print(type(pwd))
 print(father_path)
 
 import math
-
-
-# 维特的WT901传感器 数据读取实例程序，
-# 串口协议规定11个字节一个数据包，包头两个字节，包尾一个字节的检验码，中间8个字节存放回传的实际数据
-# 从现有的资料来看，JY901的串口协议与WT901的串口协议应该是一样的
-
 import time
 import struct
 import serial
@@ -23,6 +17,7 @@ import threading
 import tkinter as tk
 from datetime import datetime
 import serial.tools.list_ports
+
 
 def print_serial(port):
     print("---------------[ %s ]---------------" % port.name)
@@ -406,16 +401,17 @@ def quaternion_to_euler(w, x, y, z):
 
 
 def imu_callback(imu, pub):
-    imu_temp = Imu()
-    imu_temp = imu
-    pub.publish(imu_temp)
+    pub.publish(imu)
 
 
 # 主线程
 if __name__ == '__main__':
+
     run_ROS = True
     displayUI = False
+    # IMU的起始yaw角置零
     set_init_yaw_zero = True
+
     # 创建串口操作对象
     r = SensorReader()
     r.start()
@@ -427,57 +423,60 @@ if __name__ == '__main__':
     if displayUI:
         u.start()   # 启动UI
 
-    yaw_init = 0.0
-    if set_init_yaw_zero:
-        yaw_sum = 0.0
-        for i in range(10):
-            yaw_sum += (p.Angle[2]/180*math.pi)
-        yaw_init = yaw_sum / 10
+    try:
+        if run_ROS:
+            import rospy
+            from sensor_msgs.msg import Imu, MagneticField
+            from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 
-    if run_ROS:
-        import rospy
-        from sensor_msgs.msg import Imu, MagneticField
-        from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
-        # print("success")
-        rospy.init_node('imu_node')
-        r = rospy.Rate(20)
-        imu_raw = Imu()
-        mag = MagneticField()
-        imu_raw_pub = rospy.Publisher("imu/data_raw", Imu, queue_size=10)
-        mag_pub = rospy.Publisher("imu/mag", MagneticField, queue_size=10)
-        # Cartographer subscribes to topic "imu", whereas the madgwick_filter publish "imu/data"
-        # Here we echo the "imu/data" topic and publish it as topic "imu"
-        # imu_pub = rospy.Publisher("imu", Imu, queue_size=10)
-        # imu_sub = rospy.Subscriber("imu/data", Imu, imu_callback, imu_pub)
+            # print("success")
+            rospy.init_node('imu_node')
+            r = rospy.Rate(20)
+            imu_raw = Imu()
+            mag = MagneticField()
+            imu_raw_pub = rospy.Publisher("imu/data_raw", Imu, queue_size=10)
+            mag_pub = rospy.Publisher("imu/mag", MagneticField, queue_size=10)
+            # Cartographer subscribes to topic "imu", whereas the madgwick_filter publish "imu/data"
+            # Here we echo the "imu/data" topic and publish it as topic "imu"
+            # imu_pub = rospy.Publisher("imu", Imu, queue_size=10)
+            # imu_sub = rospy.Subscriber("imu/data", Imu, imu_callback, imu_pub)
 
-        while not rospy.is_shutdown():
-            # Publish imu message on ROS
-            imu_raw.header.stamp = rospy.Time.now()
-            imu_raw.header.frame_id = "imu_link"
-            quat = euler_to_quaternion(0, 0, p.Angle[2]/180*math.pi-yaw_init)
-            print("Yaw: ", p.Angle[2])
-            # quat = euler_to_quaternion(p.Angle[0]/180*math.pi,
-            #                            p.Angle[1]/180*math.pi,
-            #                            p.Angle[2]/180*math.pi-yaw_init)
-            imu_raw.orientation = Quaternion(quat[1], quat[2], quat[3], quat[0])
-            imu_raw.angular_velocity = Vector3(p.w[0]/180*math.pi,
-                                               p.w[1]/180*math.pi,
-                                               p.w[2]/180*math.pi)
-            imu_raw.angular_velocity_covariance[0] = -1
-            imu_raw.linear_acceleration = Vector3(p.a[0]/9.81,
-                                                  p.a[1]/9.81,
-                                                  p.a[2]/9.81)
-            imu_raw.linear_acceleration_covariance[0] = -1
-            imu_raw_pub.publish(imu_raw)
+            yaw_init = 0.0
+            if set_init_yaw_zero:
+                yaw_sum = 0.0
+                for i in range(10):
+                    yaw_sum += (p.Angle[2] / 180 * math.pi)
+                yaw_init = yaw_sum / 10
 
-            # Publish magnetic field message on ROS
-            mag.header.stamp = rospy.Time.now()
-            mag.header.frame_id = "mag_link"
-            mag.magnetic_field.x = p.h[0]
-            mag.magnetic_field.y = p.h[1]
-            mag.magnetic_field.z = p.h[2]
-            mag_pub.publish(mag)
+            while not rospy.is_shutdown():
+                # Publish imu message on ROS
+                imu_raw.header.stamp = rospy.Time.now()
+                imu_raw.header.frame_id = "imu_link"
+                quat = euler_to_quaternion(0, 0, p.Angle[2] / 180 * math.pi - yaw_init)
+                # print("Yaw: ", p.Angle[2])
+                # quat = euler_to_quaternion(p.Angle[0]/180*math.pi,
+                #                            p.Angle[1]/180*math.pi,
+                #                            p.Angle[2]/180*math.pi-yaw_init)
+                imu_raw.orientation = Quaternion(quat[1], quat[2], quat[3], quat[0])
+                imu_raw.angular_velocity = Vector3(p.w[0] / 180 * math.pi,
+                                                   p.w[1] / 180 * math.pi,
+                                                   p.w[2] / 180 * math.pi)
+                imu_raw.angular_velocity_covariance[0] = -1
+                imu_raw.linear_acceleration = Vector3(p.a[0] / 9.81,
+                                                      p.a[1] / 9.81,
+                                                      p.a[2] / 9.81)
+                imu_raw.linear_acceleration_covariance[0] = -1
+                imu_raw_pub.publish(imu_raw)
 
-            r.sleep()
-            pass
+                # Publish magnetic field message on ROS
+                mag.header.stamp = rospy.Time.now()
+                mag.header.frame_id = "mag_link"
+                mag.magnetic_field.x = p.h[0]
+                mag.magnetic_field.y = p.h[1]
+                mag.magnetic_field.z = p.h[2]
+                mag_pub.publish(mag)
+
+                r.sleep()
+
+    except rospy.ROSInterruptException:
         pass

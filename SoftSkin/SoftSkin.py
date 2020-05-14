@@ -247,30 +247,37 @@ class SoftSkin(object):
         front_part_list = [0, 0, 0, 1, 1, 1, 1,
                            1, 1, 1, 0, 0, 0]
         front_part_list = np.array(front_part_list)
-        self.serial.flushInput()
+
         while using:
+            self.serial.flushInput()
             self.read_softskin_data(0)
             if len(self.raw_data) == len(self.base_data):
                 temp_data = np.array(self.raw_data) - np.array(self.base_data)
                 max_pressure = temp_data.max()
                 if max_pressure > 165:
-                    self.locking = True
+                    cd.omega = 0
+                    cd.speed = 0
+                    cd.radius = 0
                     print(max_pressure)
+                    self.locking = True
+                    self.brake_control(self.locking)
+                    # self.is_locked = True
                     break
                 else:
                     temp_data[temp_data < 15] = 0
                     temp_data[temp_data >= 15] = 1
                     temp_sum = add.dot(temp_data)
                     front_sum = front_part_list.dot(temp_data)
-                    if temp_sum > 4 and front_sum > 0:
-                        cd.omega = 0
-                        cd.speed = 0
-                        cd.radius = 0
-                        print(temp_sum, front_sum)
-                        self.locking = True
-                        self.brake_control(self.locking)
-                        self.is_locked = True
-                        break
+                    if temp_sum >= 4:
+                        if front_sum > 0 or temp_sum >= 5:
+                            cd.omega = 0
+                            cd.speed = 0
+                            cd.radius = 0
+                            print(temp_sum, front_sum)
+                            self.locking = True
+                            self.brake_control(self.locking)
+                            break
+
 
     def stop_ssl(self, SSLrunning, cd, event_ssl):
         add = np.ones(len(self.base_data)).reshape(1, -1)
@@ -289,7 +296,7 @@ class SoftSkin(object):
                     cd.omega = 0
                     cd.speed = 0
                     cd.radius = 0
-                    # self.brake_control(self.locking)
+                    self.brake_control(self.locking)
                     event_ssl.clear()
                     break
 
@@ -347,6 +354,7 @@ class SoftSkin(object):
                 self.locking = False
                 print("All unlocked!")
                 self.brake_control(self.locking)
+                time.sleep(2)
                 break
 
     def adjust_direction(self, control_driver, using=False):
