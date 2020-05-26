@@ -226,57 +226,108 @@ class SoftSkin(object):
                 self.label = self.label_dict[100]
                 # print(self.label)
 
-    def brake_control(self, command=False):
-        if command:
+    def brake_control(self, pull_down=False, side='B', distance=0):
+        # Command format: BR500 - Brake Right for 500
+        #                 RB500 - Release Both for 500
+        command = str()
+        if pull_down:
             if not self.is_locked:
-                self.serial.write(bytes('B', encoding='utf-8'))
+                command = 'B' + side + str(distance)
                 # self.read_softskin_data()
                 self.is_locked = True
         else:
             if self.is_locked:
-                self.serial.write(bytes('R', encoding='utf-8'))
+                command = 'R' + side + str(distance)
                 # self.read_softskin_data()
                 self.is_locked = False
             pass
+        self.serial.write(bytes(command, encoding='utf-8'))
         self.serial.flushOutput()
 
-    def detect_accident(self, cd, using = True):
+    def detect_accident(self, cd, using=True):
         """using 代表用户正在使用"""
+        """压力刹车的值"""
+        flag_pre_brake = False
         """运行之前应运行baselinebuild"""
         add = np.ones(len(self.base_data)).reshape(1, -1)
         front_part_list = [0, 0, 0, 1, 1, 1, 1,
                            1, 1, 1, 0, 0, 0]
         front_part_list = np.array(front_part_list)
+        """计算变化速率用"""
+        slope_matrix = np.zeros((1, len(self.base_data)))  # 储存原始数据
+        slope_alarm = np.zeros((3, len(self.base_data)))  # 储存斜率
+        add_slope = np.ones((1, 3))  # 计算用
+        slope_number = 5  # 原始数据储存的组数
+        for i in range(slope_number):  # 初始化储存原始数据的矩阵
+            self.serial.flushInput()
+            self.read_softskin_data(0)
+            while len(self.raw_data) != len(self.base_data):
+                print("incorrect raw_data")
+                self.read_softskin_data(0)
+            slope_matrix = np.insert(slope_matrix, 0, self.raw_data, 0)
+        slope_matrix = np.delete(slope_matrix, -1, axis=0)
 
         while using:
             self.serial.flushInput()
             self.read_softskin_data(0)
             if len(self.raw_data) == len(self.base_data):
                 temp_data = np.array(self.raw_data) - np.array(self.base_data)
-                max_pressure = temp_data.max()
-                if max_pressure > 165:
+                """检测最大压力"""
+                # max_pressure = temp_data.max()
+                # if max_pressure > 80:
+                #     # 预刹车
+                #
+                #     flag_pre_brake = True
+                #     if max_pressure > 165:
+                #         self.locking = True
+                #         self.brake_control(self.locking)
+                #         print("A high pressure:", max_pressure)
+                #         break
+                # else:
+                #     if flag_pre_brake:
+                #         # 释放预刹车
+                #         pass
+                 # 检测有没有前趴
+                temp_data[temp_data < 15] = 0
+                temp_data[temp_data >= 15] = 1
+                temp_sum = add.dot(temp_data)
+                front_sum = front_part_list.dot(temp_data)
+                if temp_sum > 4 and front_sum > 0:
                     cd.omega = 0
                     cd.speed = 0
                     cd.radius = 0
-                    print(max_pressure)
+                    print("Several sensors pressed:\t", "All:", temp_sum, "\tFront:", front_sum)
                     self.locking = True
-                    self.brake_control(self.locking)
-                    # self.is_locked = True
+                    # self.brake_control(self.locking)
                     break
-                else:
-                    temp_data[temp_data < 15] = 0
-                    temp_data[temp_data >= 15] = 1
-                    temp_sum = add.dot(temp_data)
-                    front_sum = front_part_list.dot(temp_data)
-                    if temp_sum >= 4:
-                        if front_sum > 0 or temp_sum >= 5:
-                            cd.omega = 0
-                            cd.speed = 0
-                            cd.radius = 0
-                            print(temp_sum, front_sum)
-                            self.locking = True
-                            self.brake_control(self.locking)
-                            break
+                #  检测变化率
+                temp_data = np.array(self.raw_data) - np.array(self.base_data)
+                slope_matrix = np.insert(slope_matrix, 0, self.raw_data, 0)
+                slope_matrix = np.delete(slope_matrix, -1, axis=0)
+                # print(slope_matrix)
+                slope_every_sensor = slope_matrix[0, :] - slope_matrix[-1, :]
+                # print(slope_every_sensor)
+                slope_threshold = 50
+                slope_every_sensor[slope_every_sensor < slope_threshold] = 0
+                slope_every_sensor[slope_every_sensor >= slope_threshold] = 1
+                # print(slope_every_sensor)
+                slope_alarm[0:-1, :] = slope_alarm[1:slope_alarm.shape[0], :]
+                slope_alarm[-1, :] = slope_every_sensor
+                # print(slope_alarm)
+                slope_every_sensor = add_slope.dot(slope_alarm)
+                # print(slope_every_sensor)
+                # print(type(slope_every_sensor))
+                print(temp_data.max())
+                if slope_every_sensor.max() >= slope_alarm.shape[0]:
+                    pos = np.unravel_index(np.argmax(slope_every_sensor), slope_every_sensor.shape)
+                    print("Sudden change in sensor:", pos)
+                    cd.omega = 0
+                    cd.speed = 0
+                    cd.radius = 0
+                    print(temp_data.max())
+                    self.locking = True
+                    # self.brake_control(self.locking)
+                    break
 
 
     def stop_ssl(self, SSLrunning, cd, event_ssl):
@@ -357,39 +408,61 @@ class SoftSkin(object):
                 time.sleep(2)
                 break
 
-    def adjust_direction(self, control_driver, using=False):
+    def adjust_direction(self, control_driver):
         """using 代表用户不在使用"""
         """运行之前应运行baselinebuild"""
         add = np.ones(len(self.base_data)).reshape(1, -1)
         radius_list = [-90, -110, -120, -135, -155, -165, 180,
                        165, 155, 135, 120, 110, 90]
+        radius_error = [-20, -15, -15, -10, -10, 0, 14, 0, 10, 10, 15, 15, 20]
         radius_list = np.array(radius_list)
-        omega_default = 0.3
-        control_driver.speed = 0
-        control_driver.radius = 0
-        while not using:
-            if len(self.raw_data) != len(self.base_data):
-                continue
-            temp_data = np.array(self.raw_data) - np.array(self.base_data)
-            max_pressure = temp_data.max()
-            if max_pressure > 100:
-                self.locking = True
-                continue
-            else:
-                temp_data[temp_data < 20] = 0
-                temp_data[temp_data >= 20] = 1
-                temp_sum = add.dot(temp_data)
-                # print(temp_sum)
-                if temp_sum == 1:
-                    radius_temp = temp_data.dot(radius_list)
-                    control_driver.omega = radius_temp / (abs(radius_temp)) * omega_default
-                    time_for_adjust = math.radians(abs(radius_temp)) / omega_default
-                    print(radius_temp, time_for_adjust)
-                    time.sleep(time_for_adjust)
-                    control_driver.omega = 0
-                    self.locking = 1
+        radius_error = np.array(radius_error)
+        radius_list = radius_list + radius_error
+        omega_default = 0.35
+        while True:
+            self.serial.flushInput()
+            self.read_softskin_data(0)
+            if len(self.base_data) == len(self.raw_data):
+                temp_data = np.array(self.raw_data) - np.array(self.base_data)
+                max_pressure = temp_data.max()
+                if max_pressure > 100:
+                    self.locking = True
                     break
-
+                else:
+                    temp_data[temp_data < 30] = 0
+                    temp_data[temp_data >= 30] = 1
+                    temp_sum = add.dot(temp_data)
+                    # print(temp_sum)
+                    if temp_sum == 1:
+                        control_driver.speed = -0.1
+                        time.sleep(2)
+                        control_driver.speed = 0
+                        control_driver.radius = 0
+                        radius_temp = temp_data.dot(radius_list)
+                        print(radius_temp)
+                        expectedTHETA = control_driver.position[2] + math.radians(radius_temp)
+                        if expectedTHETA > math.pi:
+                            expectedTHETA -= 2 * math.pi
+                        elif expectedTHETA <= -math.pi:
+                            expectedTHETA += 2 * math.pi
+                        control_driver.omega = radius_temp / (abs(radius_temp)) * omega_default
+                        while True:
+                            if abs(control_driver.position[2] - expectedTHETA) <= 0.2:
+                                print("arrived!")
+                                break
+                        control_driver.omega = 0
+                        control_driver.speed = -0.2
+                        if abs(radius_temp) < 100:
+                            time.sleep(2)
+                        elif abs(radius_temp) < 130:
+                            time.sleep(3)
+                        elif abs(radius_temp) < 160:
+                            time.sleep(3.5)
+                        else:
+                            time.sleep(4)
+                        control_driver.speed = 0
+                        self.locking = 1
+                        break
 
 if __name__ == '__main__':
     softskin = SoftSkin()

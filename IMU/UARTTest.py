@@ -382,6 +382,7 @@ if __name__ == '__main__':
     r = SensorReader()
     # 开始读取数据
     r.start()
+    print("started!")
 
     # 创建UI对象
     u = MyUI()

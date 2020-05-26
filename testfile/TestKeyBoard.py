@@ -59,5 +59,3 @@ def method2():
             print("向右移动")
     pass
 
-
-method1()

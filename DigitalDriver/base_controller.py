@@ -11,7 +11,8 @@ from threading import Thread
 from DigitalDriver import DigitalServoDriver_linux as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
 from DigitalDriver import WheelEncoderOdometry as odo
-from DigitalDriver import IMU_Odometry_zhuz as odo_imu
+from DigitalDriver import ExtendedKalmanFilter
+import numpy as np
 import serial
 import math
 
@@ -41,6 +42,8 @@ class ControlDriver(Thread):
         self.position = [0.0, 0.0, 0.0]
         self.count = 0
         self.is_stopped = record_mode
+        self.dl = 0.0
+        self.dr = 0.0
         driver = DsD.DigitalServoDriver()
         self.left_right = left_right
         baud_rate = driver.baud_rate
@@ -61,20 +64,19 @@ class ControlDriver(Thread):
         # 初始化Odometry
         self.motorStatus_l = self.monitor_l.processData(read_byte_l)
         self.motorStatus_r = self.monitor_r.processData(read_byte_r)
-        Odo_l_init = self.motorStatus_l['FeedbackPosition']
-        Odo_r_init = self.motorStatus_r['FeedbackPosition']
-        if self.use_imu:
-            self.odo = odo_imu.Odometry(X=0.0, Y=0.0, THETA=0.0, yaw=self.imu_yaw,
-                                        Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
-        else:
-            self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0,
-                                    Odo_l=Odo_l_init, Odo_r=Odo_r_init, plot=False)
+        self._odo_l = self.motorStatus_l['FeedbackPosition']
+        self._odo_r = self.motorStatus_r['FeedbackPosition']
+
+        global tick_threshold
+        self.odo = odo.Odometry(X=0.0, Y=0.0, THETA=0.0,
+                                imu_yaw=self.imu_yaw, use_imu=self.use_imu,
+                                tick_threshold=tick_threshold,
+                                Odo_l=-self._odo_l, Odo_r=self._odo_r, plot=False)
         # print('-------------------------------------------------------------------------------------------------------')
         # print('Initial LEFT monitor: ', self.motorStatus_l)
         # print('Initial RIGHT monitor:', self.motorStatus_r)
         # print('init: ', Odo_l_init, Odo_r_init)
         # print('-------------------------------------------------------------------------------------------------------')
-
         # time.sleep(2)
 
     def read_monitor(self, ser):
@@ -89,10 +91,10 @@ class ControlDriver(Thread):
     def change_speed(self, v, omega):
         if self.is_stopped and v+omega!=0:
             self.start_motor()
-
+            
         # The following lines are used if you wish to disable brake when
         # the walker is stationary. However this could be problematic when
-        # using xbox controller.
+        # using xbox controller. But it will cause some problem.
         # if(self.speed + self.omega != 0) and (v + omega == 0):
         #     self.stop_motor()
         # elif( (v + omega) != 0 and (self.speed + self.omega == 0)):
@@ -164,18 +166,22 @@ class ControlDriver(Thread):
                 self.motorStatus_r = self.monitor_r.processData(read_byte_r)
                 Odo_l = self.motorStatus_l['FeedbackPosition']
                 Odo_r = self.motorStatus_r['FeedbackPosition']
-
                 # 更新位置
                 if self.use_imu:
                     self.position = self.odo.updatePose(-Odo_l, Odo_r, self.imu_yaw)
                 else:
                     self.position = self.odo.updatePose(-Odo_l, Odo_r)
+
+                self.dl = -((Odo_l - self._odo_l) / 4096) * 2 * math.pi * 0.085
+                self.dr = ((Odo_r - self._odo_r) / 4096) * 2 * math.pi * 0.085
+
+
                 # print('Position:  X=%.3f;  Y=%.3f;  THETA=%.3f'
                 #       % (self.position[0], self.position[1], self.position[2]/math.pi*180))
 
-                if math.sqrt((self.position[0]-self.plot_x[-1])**2+(self.position[1]-self.plot_y[-1])**2)>0.1:
-                    self.plot_x.append(self.position[0])
-                    self.plot_y.append(self.position[1])
+                # if math.sqrt((self.position[0]-self.plot_x[-1])**2+(self.position[1]-self.plot_y[-1])**2)>0.1:
+                #     self.plot_x.append(self.position[0])
+                #     self.plot_y.append(self.position[1])
 
                 # 若有故障
                 if self.motorStatus_l["Malfunction"] or self.motorStatus_r["Malfunction"]:
@@ -229,7 +235,6 @@ class ControlDriver(Thread):
     def __del__(self):
         self.stop_motor()
         pass
-
     pass
 
 
@@ -261,30 +266,49 @@ def callback_vel(vel, cd):
 
 
 def callback_imu(imu, cd):
+    global init_count, init_yaw, yaw_sum
     yaw = quaternion_to_euler(imu.orientation.w,
                               imu.orientation.x,
                               imu.orientation.y,
                               imu.orientation.z)[2]
-    cd.imu_yaw = round(yaw, 2)
+    if init_count < 10:
+        yaw_sum += yaw
+        init_count += 1
+        pass
+    elif init_count == 10:
+        init_yaw = yaw_sum/10
+        init_count += 1
+    else:
+        cd.imu_yaw = round(yaw-init_yaw, 2)
+        print("yaw: %.3f" % ((yaw-init_yaw)/math.pi*180))
     pass
+
+
+yaw_sum = 0
+init_yaw = 0.0
+init_count = 0
+tick_threshold = 10
 
 
 if __name__ == '__main__':
 
     cd = ControlDriver(V=0.0, OMEGA=0.0, use_imu=False, left_right=0, record_mode=True)
     cd.start()
+    init_state = cd.odo.getROS_XYTHETA()
+
+    ekf = ExtendedKalmanFilter.ExtendedKalmanFilter(init_state=np.array([[init_state[0]],
+                                                                         [init_state[1]],
+                                                                         [init_state[2]] ]))
 
     try:
         rospy.init_node('base_controller_node')
         r = rospy.Rate(20)
         vel_sub = rospy.Subscriber("cmd_vel", Twist, callback_vel, cd)
-        odom_pub = rospy.Publisher("odom", Odometry, queue_size=10)
         imu_sub = rospy.Subscriber("imu/data_raw", Imu, callback_imu, cd)
-
+        odom_pub = rospy.Publisher("odom", Odometry, queue_size=10)
         odom = Odometry()
         pos_p = cd.odo.getROS_XYTHETA()
         last_time = rospy.Time.now()
-
         while not rospy.is_shutdown():
             current_time = rospy.Time.now()
             dt = current_time - last_time
@@ -292,11 +316,10 @@ if __name__ == '__main__':
 
             # Publish raw odometry data by the topic "/odom"
             pos = cd.odo.getROS_XYTHETA()
-            x, y, theta = pos[0], pos[1], pos[2]
-            dx, dy, dtheta = x-pos_p[0], y-pos_p[1], theta-pos_p[2]
-            vx, vy, vtheta = dx/dt, dy/dt, dtheta/dt
-            # Theta euler -> quaternion
-            # 这里我们屏蔽掉了roll和pitch的角度
+            # print("X=%.3f,  Y=%.3f,  THETA=%.3f" % (pos[0], pos[1], pos[2]))
+            x, y, theta = round(pos[0], 3), round(pos[1], 3), round(cd.imu_yaw, 3)
+            dx, dy, dtheta = round(x-pos_p[0], 3), round(y-pos_p[1], 3), round(theta-pos_p[2], 3)
+            vx, vy, vtheta = round(dx/dt, 3), round(dy/dt, 3), round(dtheta/dt, 3)
             odom_quat = Quaternion(0.0, 0.0, math.sin(0.5 * theta), math.cos(0.5 * theta))
             # publish Odometry over ROS
             odom.header.stamp = current_time
@@ -305,9 +328,16 @@ if __name__ == '__main__':
             odom.child_frame_id = "base_link"
             odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vtheta))
             odom_pub.publish(odom)
-
             pos_p = pos
             last_time = current_time
+
+            # Kalman filter update
+            u = np.array([[cd.dr],
+                          [cd.dl]])
+            z = np.array([[pos[0]],
+                          [pos[1]],
+                          [cd.imu_yaw]])
+            ekf.predict_update(u, z)
 
             r.sleep()
 

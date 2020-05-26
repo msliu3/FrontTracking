@@ -3,8 +3,10 @@ import matplotlib.pyplot as plt
 from DigitalDriver import ControlDriver as CD
 import math
 
+
 class Odometry:
-    def __init__(self, X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0, tick_threshold=0 ,plot=False):
+    def __init__(self, X=0.0, Y=0.0, THETA=0.0, Odo_l=0, Odo_r=0,
+                 imu_yaw=0.0, use_imu=False, tick_threshold=0, plot=False):
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
         self.d_theta = 0.0
         self.d_l, self.d_r = 0.0, 0.0
@@ -14,13 +16,17 @@ class Odometry:
         self.dX, self.dY = 0.0, 0.0
         self.plot = plot
         self.THETA = THETA
+        self.imu_yaw = imu_yaw
+        self.use_imu = use_imu
         self.tick_threshold = tick_threshold
         self.dx, self.dy = 0.0, 0.0  # Walker坐标系下的坐标变化
-        print('X=', self.X, 'm;  Y=', self.Y, 'm;  THETA=', self.THETA / math.pi * 180, '°')
+        # print('X=', self.X, 'm;  Y=', self.Y, 'm;  THETA=', self.THETA / math.pi * 180, '°')
 
     # 更新里程计读取到的信息
-    def updatePose(self, Odo_l, Odo_r):
-        self.Odo_l, self.Odo_r = Odo_l, Odo_r
+    def updatePose(self, *args):
+        self.Odo_l, self.Odo_r = args[0], args[1]
+        if len(args) > 2:
+            self.imu_yaw = args[-1]
         # print("Digital distance:",self.Odo_l,self.Odo_r)
 
         # 计算两轮相对于上一时刻的位移
@@ -64,11 +70,11 @@ class Odometry:
         # print('Turning Radius: ', self.Radius, 'm;',self.d_theta)
 
         # 计算坐标变化dX, dY
-        if self.d_l == self.d_r:  # 直行
+        if round(self.d_l, 3) == round(self.d_r, 3):  # 直行
             self.dx = 0.0
             self.dy = self.d_l
         else:
-            if (self.d_l + self.d_r) == 0:  # 原地转向或静止
+            if round(self.d_l+self.d_r, 4) == 0:  # 原地转向或静止
                 self.dX, self.dY = 0.0, 0.0
             elif abs(self.d_l) > abs(self.d_r) and self.d_l > 0:  # 右前
                 self.dx = self.Radius * (1 - math.cos(abs(self.d_theta)))

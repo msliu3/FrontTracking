@@ -110,7 +110,7 @@ class FrontFollowing(threading.Thread):
             # print("------action_loop end------")
 
     def detecting_loop(self, matcher):
-        nn_model = DL.DeepLearningDetectCase(model_name="dnn1.ckpt")
+        nn_model = DL.DeepLearningDetectCase(model_name="dnn2.ckpt")
         while True:
             time.sleep(0.05)
             if not self.queue.empty():
@@ -150,7 +150,7 @@ if __name__ == '__main__':
     t1.start()
     ff = FrontFollowing(control_driver)
     ff.start()
-    ff.stop_front_following()
+    # ff.stop_front_following()
     # time.sleep(5)
-    time.sleep(10)
-    ff.resume_front_following()
+    # time.sleep(10)
+    # ff.resume_front_following()

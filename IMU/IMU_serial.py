@@ -409,8 +409,6 @@ if __name__ == '__main__':
 
     run_ROS = True
     displayUI = False
-    # IMU的起始yaw角置零
-    set_init_yaw_zero = True
 
     # 创建串口操作对象
     r = SensorReader()
@@ -441,22 +439,15 @@ if __name__ == '__main__':
             # imu_pub = rospy.Publisher("imu", Imu, queue_size=10)
             # imu_sub = rospy.Subscriber("imu/data", Imu, imu_callback, imu_pub)
 
-            yaw_init = 0.0
-            if set_init_yaw_zero:
-                yaw_sum = 0.0
-                for i in range(10):
-                    yaw_sum += (p.Angle[2] / 180 * math.pi)
-                yaw_init = yaw_sum / 10
-
             while not rospy.is_shutdown():
                 # Publish imu message on ROS
                 imu_raw.header.stamp = rospy.Time.now()
                 imu_raw.header.frame_id = "imu_link"
-                quat = euler_to_quaternion(0, 0, p.Angle[2] / 180 * math.pi - yaw_init)
+                quat = euler_to_quaternion(0, 0, p.Angle[2] / 180 * math.pi)
                 # print("Yaw: ", p.Angle[2])
                 # quat = euler_to_quaternion(p.Angle[0]/180*math.pi,
                 #                            p.Angle[1]/180*math.pi,
-                #                            p.Angle[2]/180*math.pi-yaw_init)
+                #                            p.Angle[2]/180*math.pi)
                 imu_raw.orientation = Quaternion(quat[1], quat[2], quat[3], quat[0])
                 imu_raw.angular_velocity = Vector3(p.w[0] / 180 * math.pi,
                                                    p.w[1] / 180 * math.pi,
