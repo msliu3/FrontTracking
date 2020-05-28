@@ -110,5 +110,5 @@ class DeepLearningDetectCase(object):
         result_, logits_ = self.sess.run([self.predict_result, self.logits],
                                          feed_dict=self.obtain_input(ir_data_sample, leg_sample))
 
-        print("--------------", self.dict_class[int(result_)], "--------------------")
+        # print("--------------", self.dict_class[int(result_)], "--------------------")
         return result_

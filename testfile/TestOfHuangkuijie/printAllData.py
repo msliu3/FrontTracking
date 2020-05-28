@@ -13,7 +13,7 @@ def ControlBysoftSkin(datanew):
 if __name__ == "__main__":
     #ss = SoftSkin.SoftSkin()
     #dataofsoftskin = ss.read_softskin_data()
-    ser = serial.Serial(port="/dev/ttyACM0", baudrate=9600, timeout=None)
+    ser = serial.Serial(port="/dev/ttyACM1", baudrate=9600, timeout=None)
     print("1")
     # cd = ControlandOdometryDriver.ControlDriver(left_right=1)
     # cd.start()

@@ -1,9 +1,9 @@
 import serial
 from SoftSkin import SoftSkin
-import  time
+import time
+import numpy as np
 
 if __name__ == "__main__":
-
     ss = SoftSkin.SoftSkin()
 
     try:

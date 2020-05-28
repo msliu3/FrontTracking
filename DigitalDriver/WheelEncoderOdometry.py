@@ -10,12 +10,12 @@ class Odometry:
         self.Odo_l, self.Odo_r = Odo_l, Odo_r
         self.d_theta = 0.0
         self.d_l, self.d_r = 0.0, 0.0
-        self.p_l, self.p_r = 0, 0
+        self._p_l, self._p_r = 0, 0
         self.Radius = 0.0
-        self.X, self.Y = X, Y
-        self.dX, self.dY = 0.0, 0.0
+        self._X, self._Y = X, Y
+        self._dX, self._dY = 0.0, 0.0
         self.plot = plot
-        self.THETA = THETA
+        self._THETA = THETA
         self.imu_yaw = imu_yaw
         self.use_imu = use_imu
         self.tick_threshold = tick_threshold
@@ -30,28 +30,28 @@ class Odometry:
         # print("Digital distance:",self.Odo_l,self.Odo_r)
 
         # 计算两轮相对于上一时刻的位移
-        if abs(self.Odo_l - self.p_l) >= self.tick_threshold:
-            self.d_l = ((self.Odo_l - self.p_l) / 4096) * 2 * math.pi * 0.085
+        if abs(self.Odo_l - self._p_l) >= self.tick_threshold:
+            self.d_l = ((self.Odo_l - self._p_l) / 4096) * 2 * math.pi * 0.085
         else:
             self.d_l = 0
-        if abs(self.Odo_r - self.p_r) >= self.tick_threshold:
-            self.d_r = ((self.Odo_r - self.p_r) / 4096) * 2 * math.pi * 0.085
+        if abs(self.Odo_r - self._p_r) >= self.tick_threshold:
+            self.d_r = ((self.Odo_r - self._p_r) / 4096) * 2 * math.pi * 0.085
         else:
             self.d_r = 0
         # print('Left displacement: ', self.d_l, 'm;  Right displacement: ', self.d_r, 'm;')
 
         # 保存此时刻编码器数据
-        self.p_l = self.Odo_l
-        self.p_r = self.Odo_r
+        self._p_l = self.Odo_l
+        self._p_r = self.Odo_r
 
         # 计算dθ，逆时针为正，顺时针为负
         self.d_theta = (self.d_r - self.d_l) / 0.54  # 左转>0, 右转<0
         # 更新朝向角θ（θ∈(-π，π]）
-        self.THETA += self.d_theta
-        if self.THETA > math.pi:
-            self.THETA -= 2 * math.pi
-        elif self.THETA <= -math.pi:
-            self.THETA += 2 * math.pi
+        self._THETA += self.d_theta
+        if self._THETA > math.pi:
+            self._THETA -= 2 * math.pi
+        elif self._THETA <= -math.pi:
+            self._THETA += 2 * math.pi
 
         # 计算转弯半径 R
         if self.d_theta:
@@ -75,7 +75,7 @@ class Odometry:
             self.dy = self.d_l
         else:
             if round(self.d_l+self.d_r, 4) == 0:  # 原地转向或静止
-                self.dX, self.dY = 0.0, 0.0
+                self._dX, self._dY = 0.0, 0.0
             elif abs(self.d_l) > abs(self.d_r) and self.d_l > 0:  # 右前
                 self.dx = self.Radius * (1 - math.cos(abs(self.d_theta)))
                 self.dy = self.Radius * math.sin(abs(self.d_theta))
@@ -92,17 +92,17 @@ class Odometry:
 
         # Walker坐标系下的坐标变化dx,dy → 绝对坐标系下的坐标变化 dX, dY
         # dX = cosθ·dx - sinθ·dy,  dY = sinθ·dx + cosθ·dy （参考复平面的2D旋转公式）
-        self.dX = self.dx * math.cos(self.THETA) - self.dy * math.sin(self.THETA)
-        self.dY = self.dx * math.sin(self.THETA) + self.dy * math.cos(self.THETA)
+        self._dX = self.dx * math.cos(self._THETA) - self.dy * math.sin(self._THETA)
+        self._dY = self.dx * math.sin(self._THETA) + self.dy * math.cos(self._THETA)
 
         # 更新绝对坐标系下坐标变化
-        self.X += self.dX
-        self.Y += self.dY
+        self._X += self._dX
+        self._Y += self._dY
         # print("X,Y,theta",self.X,self.Y,self.THETA)
-        return (self.X, self.Y, self.THETA)
+        return (self._X, self._Y, self._THETA)
 
     def getROS_XYTHETA(self):
-        return (self.Y, -self.X, self.THETA)
+        return (self._Y, -self._X, self._THETA)
 
     def get_dxdydtheta(self):
         return (self.dy, -self.dx, self.d_theta) # 弧度制

@@ -80,7 +80,7 @@ class FrontFollowing(threading.Thread):
         thread_ir.start()
         p1 = threading.Thread(target=self.action_loop, args=(self.matcher,))
         p1.start()
-        p2 = threading.Thread(target=self.detecting_loop, args=(self.matcher,))  # nn_model,
+        p2 = threading.Thread(target=self.detecting_loop_delay_state, args=(self.matcher,))  # nn_model,
         p2.start()
         # while True:
         #     time.sleep(0.5)
@@ -141,6 +141,83 @@ class FrontFollowing(threading.Thread):
                     self.event_action_loop.set()
 
                 matcher.clear_expect()
+    def detecting_loop_delay_state(self, matcher):
+        """
+        连续N个同样结果再进行移动
+        :param matcher:
+        :return:
+        """
+        nn_model = DL.DeepLearningDetectCase(model_name="dnn2.ckpt", sample_num=1)
+        state_list = []
+        state_num = 3
+        while True:
+            time.sleep(0.05)
+            if not self.queue.empty():
+                temps = self.queue.get(block=False)
+
+                leg_temp = np.array(
+                    [matcher.leg.left_leg_x, matcher.leg.left_leg_y, matcher.leg.right_leg_x,
+                     matcher.leg.right_leg_y]).reshape([1, 4])
+
+                ir_np = np.array(temps).reshape([32 * 24, nn_model.sample_num])
+                leg_np = np.array(leg_temp).reshape([4, nn_model.sample_num])
+                result = nn_model.print_predict_result(ir_np, leg_np)
+                matcher.detect_front_and_back_foot()
+                x, theta = matcher.detect_case(result)
+                state_list.append(matcher.state)
+                if len(state_list) == state_num and self.position_control.action_over:
+                    if state_list.count(state_list[-1]) == state_num:
+                        self.position_control.set_expect(x, theta)
+                        if not self.stop_flag:
+                            self.event_action_loop.set()
+                if len(state_list) >= state_num:
+                    state_list.pop(0)
+                matcher.clear_expect()
+
+    def detecting_loop_8samples(self, matcher):
+        nn_model = DL.DeepLearningDetectCase(model_name="8samples0.ckpt", sample_num=8)
+        ir_data_sequence = []
+        legs_data_sequence = []
+        while True:
+            time.sleep(0.05)
+            if not self.queue.empty():
+                # 获得红外数据
+                temps = self.queue.get(block=False)
+                ir_np = np.array(temps).reshape([32 * 24, 1])
+                if len(ir_data_sequence) < 8:
+                    ir_data_sequence.append(ir_np)
+                elif len(ir_data_sequence) == 8:
+                    ir_data_sequence.pop()
+                    ir_data_sequence.append(ir_np)
+                # print("leg:",
+                #       matcher.leg.left_leg_x,
+                #       matcher.leg.left_leg_y,
+                #       matcher.leg.right_leg_x,
+                #       matcher.leg.right_leg_y
+                #       )
+
+                leg_temp = np.array(
+                    [matcher.leg.left_leg_x, matcher.leg.left_leg_y, matcher.leg.right_leg_x,
+                     matcher.leg.right_leg_y]).reshape([1, 4])
+                leg_np = np.array(leg_temp).reshape([4, 1])
+                if len(legs_data_sequence) < 8:
+                    legs_data_sequence.append(leg_np)
+                elif len(legs_data_sequence) == 8:
+                    legs_data_sequence.pop()
+                    legs_data_sequence.append(leg_np)
+                if len(ir_data_sequence) == len(legs_data_sequence) == 8:
+
+                    ir_data = np.array(ir_data_sequence).reshape([24 * 32, 8])
+                    legs_data = np.array(legs_data_sequence).reshape([4, 8])
+                    result = nn_model.print_predict_result(ir_data, legs_data)
+                    matcher.detect_front_and_back_foot()
+                    x, theta = matcher.detect_case(result)
+                    # print(x, theta)
+                    self.position_control.set_expect(x, theta)
+                    if not self.stop_flag:
+                        self.event_action_loop.set()
+
+                    matcher.clear_expect()
 
 
 if __name__ == '__main__':

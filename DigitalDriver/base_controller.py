@@ -12,6 +12,7 @@ from DigitalDriver import DigitalServoDriver_linux as DsD
 from DigitalDriver import DriverMonitor_zhuzhi as DM
 from DigitalDriver import WheelEncoderOdometry as odo
 from DigitalDriver import ExtendedKalmanFilter
+import matplotlib.pyplot as plt
 import numpy as np
 import serial
 import math
@@ -280,7 +281,7 @@ def callback_imu(imu, cd):
         init_count += 1
     else:
         cd.imu_yaw = round(yaw-init_yaw, 2)
-        print("yaw: %.3f" % ((yaw-init_yaw)/math.pi*180))
+        # print("yaw: %.3f" % ((yaw-init_yaw)/math.pi*180))
     pass
 
 
@@ -289,16 +290,20 @@ init_yaw = 0.0
 init_count = 0
 tick_threshold = 10
 
+x_plot = []
+y_plot = []
+x_plot_ekf = []
+y_plot_ekf = []
 
 if __name__ == '__main__':
 
     cd = ControlDriver(V=0.0, OMEGA=0.0, use_imu=False, left_right=0, record_mode=True)
     cd.start()
     init_state = cd.odo.getROS_XYTHETA()
-
+    print("init_state: ", init_state)
     ekf = ExtendedKalmanFilter.ExtendedKalmanFilter(init_state=np.array([[init_state[0]],
                                                                          [init_state[1]],
-                                                                         [init_state[2]] ]))
+                                                                         [init_state[2]]]))
 
     try:
         rospy.init_node('base_controller_node')
@@ -316,7 +321,23 @@ if __name__ == '__main__':
 
             # Publish raw odometry data by the topic "/odom"
             pos = cd.odo.getROS_XYTHETA()
+            x_plot.append(-pos[1])
+            y_plot.append(pos[0])
             # print("X=%.3f,  Y=%.3f,  THETA=%.3f" % (pos[0], pos[1], pos[2]))
+
+            # Kalman filter update
+            u = np.array([[cd.dr],
+                          [cd.dl]])
+            z = np.array([[pos[0]],
+                          [pos[1]],
+                          [cd.imu_yaw]])
+            ekf.x_prior = np.array([[pos[0]],
+                                    [pos[1]],
+                                    [pos[2]]])
+            pose_ekf = ekf.predict_update(u, z)
+            x_plot_ekf.append(-pose_ekf.reshape(3)[1])
+            y_plot_ekf.append(pose_ekf.reshape(3)[0])
+
             x, y, theta = round(pos[0], 3), round(pos[1], 3), round(cd.imu_yaw, 3)
             dx, dy, dtheta = round(x-pos_p[0], 3), round(y-pos_p[1], 3), round(theta-pos_p[2], 3)
             vx, vy, vtheta = round(dx/dt, 3), round(dy/dt, 3), round(dtheta/dt, 3)
@@ -330,16 +351,19 @@ if __name__ == '__main__':
             odom_pub.publish(odom)
             pos_p = pos
             last_time = current_time
-
-            # Kalman filter update
-            u = np.array([[cd.dr],
-                          [cd.dl]])
-            z = np.array([[pos[0]],
-                          [pos[1]],
-                          [cd.imu_yaw]])
-            ekf.predict_update(u, z)
-
             r.sleep()
 
     except rospy.ROSInterruptException:
         pass
+
+    plt.plot(x_plot, y_plot, 'r-')
+    plt.plot(x_plot_ekf, y_plot_ekf, 'g-')
+    xlimit = max(abs(max(x_plot)), abs(min(x_plot)),
+                 abs(max(x_plot_ekf)), abs(min(x_plot_ekf)))
+    ylimit = max(abs(max(y_plot)), abs(min(y_plot)),
+                 abs(max(y_plot_ekf)), abs(min(y_plot_ekf)))
+    limit = max(xlimit, ylimit) + 0.5
+    plt.xlim(-limit, limit)
+    plt.ylim(-limit, limit)
+    plt.grid(True)
+    plt.show()

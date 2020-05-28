@@ -709,7 +709,7 @@ def judge_active(wave_output_filename):
     v3 = np.average(np.abs(d3))
     v4 = np.average(np.abs(d4))
 
-    threshold_v = 400 # 230
+    threshold_v = 230 # 230
 
     if v1 > threshold_v or v2 > threshold_v or v3 > threshold_v or v4 > threshold_v:
         print("Voice intensity: ", v1, v2, v3, v4)
@@ -779,7 +779,7 @@ def SSLturning(cd, angle):
     # print('final position: ', cd.position[2])
 
 
-def loop_record(control, event, source='test'):
+def loop_record(control, source='test'):
     device_index = -1
 
     p = pyaudio.PyAudio()
@@ -830,7 +830,6 @@ def loop_record(control, event, source='test'):
 
     # steps
     while True:
-        event.wait()
         print("===== %d =====" % saved_count)
         map.print_walker_status()
         map.detect_which_region()
@@ -964,7 +963,7 @@ def loop_record(control, event, source='test'):
 
         print("apply movement ...")
 
-        SSLturning(control, direction)
+        # SSLturning(control, direction)
 
         # control.speed = STEP_SIZE / FORWARD_SECONDS
         control.radius = 0
