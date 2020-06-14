@@ -431,4 +431,5 @@ class DemonProcess(object):
 
 if __name__ == '__main__':
     pd = DemonProcess()
-    pd.start_Demon()
+    # pd.start_Demon()
+    pd.start_Demon_for_DL()

@@ -88,7 +88,7 @@ if __name__ == "__main__":
         ss.serial.flushInput()
         dataofsoftskin = ss.read_softskin_data(0)
         print(dataofsoftskin)
-        if(dataofsoftskin[2]>100):
+        if(dataofsoftskin[1]>50):
             input()
 
         print(1)

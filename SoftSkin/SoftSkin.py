@@ -61,7 +61,7 @@ def detect_serials(description="target device", vid=0x10c4, pid=0xea60):
 
 class SoftSkin(object):
     def __init__(self):
-        port_name = detect_serials(description="ttyACM1")  # Arduino Mega 2560 ttyACM0
+        port_name = detect_serials(description="ttyACM0")  # Arduino Mega 2560 ttyACM0
         baud_rate = 115200
         print(port_name, baud_rate)
         self.serial = serial.Serial(port_name, baud_rate, timeout=None)
@@ -88,6 +88,7 @@ class SoftSkin(object):
         self.father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
         self.textnum = 0
         self.lock_value = 0
+        self.flag_read = 0
 
         pass
 
@@ -112,7 +113,7 @@ class SoftSkin(object):
             self.raw_data = []
 
 
-    def build_base_line_data(self, initial_size=15):
+    def build_base_line_data(self, initial_size=20):
         """
         1.建立一组基准数值
             检测异常值
@@ -121,6 +122,7 @@ class SoftSkin(object):
         """
         base_list = []
         for i in range(initial_size):
+            self.serial.flushInput()
             self.read_softskin_data(0)
             if len(self.raw_data) == 13:
                 temp_raw_data = self.raw_data
@@ -273,9 +275,9 @@ class SoftSkin(object):
             else:
                 print("lock out of range")
             # self.read_softskin_data()
-        print(self.lock_value, '\t', command)
+        # print(self.lock_value, '\t', command)
         self.serial.write(bytes(command, encoding='utf-8'))
-        print("finish")
+        # print("finish")
         self.serial.flushOutput()
 
 
@@ -312,11 +314,11 @@ class SoftSkin(object):
                     temp_data = np.array(self.raw_data) - np.array(self.base_data)
                     file.write(str(temp_data.tolist())+'\n')
                     """检测有没有前趴"""
-                    temp_data[temp_data < 30] = 0
-                    temp_data[temp_data >= 30] = 1
+                    temp_data[temp_data < 15] = 0
+                    temp_data[temp_data >= 15] = 1
                     temp_sum = add.dot(temp_data)
                     front_sum = front_part_list.dot(temp_data)
-                    if temp_sum > 4 and front_sum > 0:
+                    if temp_sum > 3 and front_sum > 0:
                         cd.omega = 0
                         cd.speed = 0
                         cd.radius = 0
@@ -330,7 +332,7 @@ class SoftSkin(object):
                     # print(slope_matrix)
                     slope_every_sensor = slope_matrix[0, :] - slope_matrix[-1, :]
                     # print(slope_every_sensor)
-                    slope_threshold = 45
+                    slope_threshold = 20
                     slope_every_sensor[slope_every_sensor < slope_threshold] = 0
                     slope_every_sensor[slope_every_sensor >= slope_threshold] = 1
                     # print(slope_every_sensor)
@@ -351,8 +353,8 @@ class SoftSkin(object):
                         break
                     """检测最大压力"""
                     max_pressure = temp_data.max()
-                    threshold_pre = 120
-                    threshold_fin = 180
+                    threshold_pre = 90
+                    threshold_fin = 120
                     if not flag_pre_brake:
                         if max_pressure < threshold_pre:
                             pass
@@ -377,8 +379,9 @@ class SoftSkin(object):
                             print("Max_pressure:", max_pressure)
                             self.brake_control(True, 400)
                             break
-
+            self.textnum += 1
             file.close()
+
 
 
     def stop_ssl(self, SSLrunning, cd, event_ssl):
@@ -508,7 +511,7 @@ class SoftSkin(object):
                         # time.sleep(2)
                         while True:
                             time.sleep(0.1)
-                            print("time")
+                            # print("time")
                             if abs(cd.position[2] - expectedTHETA) <= 0.2:
                                 print("arrived!")
                                 break
@@ -524,14 +527,162 @@ class SoftSkin(object):
                             time.sleep(4)
                         cd.speed = 0
 
-                        # time.sleep()
-                        # self.serial.flushOutput()
-                        # print("test",self.lock_value)
-                        # self.brake_control(True, 550 - self.lock_value)
+                        # self.serial.flushInput()
+                        print("test",self.lock_value)
+                        for i in range(175):
+                            self.read_softskin_data(0)
+                            # print(i)
+                        print("done")
+                        self.brake_control(True, 550 - self.lock_value)
 
                         break
 
+    def collect_data(self):
+        # """using 代表用户正在使用"""
+        # """压力刹车的值"""
+        # flag_pre_brake = False
+        # """运行之前应运行baselinebuild"""
+        # add = np.ones(len(self.base_data)).reshape(1, -1)
+        # front_part_list = [0, 0, 0, 1, 1, 1, 1,
+        #                    1, 1, 1, 0, 0, 0]
+        # front_part_list = np.array(front_part_list)
+        """计算变化速率用"""
+        slope_matrix = np.zeros((1, len(self.base_data)))  # 储存原始数据
+        slope_alarm = np.zeros((3, len(self.base_data)))  # 储存斜率
+        add_slope = np.ones((1, 3))  # 计算用
+        slope_number = 5  # 原始数据储存的组数
+        for i in range(slope_number):  # 初始化储存原始数据的矩阵
+            self.serial.flushInput()
+            self.read_softskin_data(0)
+            while len(self.raw_data) != len(self.base_data):
+                print("incorrect raw_data")
+                self.read_softskin_data(0)
+            slope_matrix = np.insert(slope_matrix, 0, self.raw_data, 0)
+        slope_matrix = np.delete(slope_matrix, -1, axis=0)
 
+        data_path = self.father_path + os.path.sep + "resource" + os.path.sep + "collect"  + ".txt"
+
+        with open(data_path, 'w') as file:
+            while True:
+                self.serial.flushInput()
+                self.read_softskin_data()
+                if len(self.raw_data) == len(self.base_data):
+                    temp_data = np.array(self.raw_data) - np.array(self.base_data)
+                    file.write(str(temp_data.tolist())+'\n')
+                    # """检测有没有前趴"""
+                    # temp_data[temp_data < 15] = 0
+                    # temp_data[temp_data >= 15] = 1
+                    # temp_sum = add.dot(temp_data)
+                    # front_sum = front_part_list.dot(temp_data)
+                    # if temp_sum > 5 and front_sum > 0:
+                    #     cd.omega = 0
+                    #     cd.speed = 0
+                    #     cd.radius = 0
+                    #     print("Several sensors pressed:\t", "All:", temp_sum, "\tFront:", front_sum)
+                    #     self.brake_control(True, 550 - self.lock_value)
+                    #     break
+                    #  检测变化率
+                    slope_matrix = np.insert(slope_matrix, 0, temp_data, 0)
+                    slope_matrix = np.delete(slope_matrix, -1, axis=0)
+                    slope_every_sensor = slope_matrix[0, :] - slope_matrix[-1, :]
+                    slope_threshold = 15
+                    slope_every_sensor[slope_every_sensor < slope_threshold] = 0
+                    slope_every_sensor[slope_every_sensor >= slope_threshold] = 1
+                    slope_alarm[0:-1, :] = slope_alarm[1:slope_alarm.shape[0], :]
+                    slope_alarm[-1, :] = slope_every_sensor
+                    slope_every_sensor = add_slope.dot(slope_alarm)
+                    # if slope_every_sensor.max() >= slope_alarm.shape[0]:
+                    #     pos = np.unravel_index(np.argmax(slope_every_sensor), slope_every_sensor.shape)
+                    #     print("Sudden change in sensor:", pos)
+                    #     break
+                    """检测最大压力"""
+                    max_pressure = temp_data.max()
+                    threshold_pre = 100
+                    threshold_fin = 140
+                    # if not flag_pre_brake:
+                    #     if max_pressure < threshold_pre:
+                    #         pass
+                    #     elif max_pressure < threshold_fin:
+                    #         print("yushache")
+                    #         self.brake_control(True, 150)
+                    #         flag_pre_brake = True
+                    #         time.sleep(1)
+                    #     else:
+                    #         print("Max_pressure:", max_pressure)
+                    #         self.brake_control(True, 550)
+                    #         break
+                    # else:
+                    #     if max_pressure < threshold_pre:
+                    #         print("cancel yushache")
+                    #         self.brake_control(False, 150)
+                    #         flag_pre_brake = False
+                    #         time.sleep(1)
+                    #     elif max_pressure < threshold_fin:
+                    #         pass
+                    #     else:
+                    #         print("Max_pressure:", max_pressure)
+                    #         self.brake_control(True, 400)
+                    #         break
+                    # if max_pressure >= threshold_fin:
+                    #     break
+            self.textnum += 1
+            file.close()
+
+    def unlock_new(self):
+        """运行之前应运行baselinebuild"""
+        """计算变化速率用"""
+        slope_matrix = np.zeros((1, len(self.base_data)))  # 储存原始数据
+        slope_alarm = np.zeros((3, len(self.base_data)))  # 储存斜率
+        add_slope = np.ones((1, 3))  # 计算用
+        slope_number = 5  # 原始数据储存的组数
+        for i in range(slope_number):  # 初始化储存原始数据的矩阵
+            self.serial.flushInput()
+            self.read_softskin_data(0)
+            while len(self.raw_data) != len(self.base_data):
+                print("incorrect raw_data")
+                self.read_softskin_data(0)
+            slope_matrix = np.insert(slope_matrix, 0, self.raw_data, 0)
+        slope_matrix = np.delete(slope_matrix, -1, axis=0)
+        data_path = self.father_path + os.path.sep + "resource" + os.path.sep + "unlock" + str(self.textnum) + ".txt"
+        with open(data_path, 'w') as file:
+            while True:
+                self.serial.flushInput()
+                self.read_softskin_data(0)
+                if len(self.raw_data) == len(self.base_data):
+                    temp_data = np.array(self.raw_data) - np.array(self.base_data)
+                    file.write(str(temp_data.tolist()) + '\n')
+                    #  检测变化率
+                    temp_data = np.array(self.raw_data) - np.array(self.base_data)
+                    slope_matrix = np.insert(slope_matrix, 0, temp_data, 0)
+                    slope_matrix = np.delete(slope_matrix, -1, axis=0)
+                    slope_every_sensor = slope_matrix[0, :] - slope_matrix[-1, :]
+                    slope_threshold_min = 10
+                    slope_threshold_max = 20
+                    slope_every_sensor[slope_every_sensor < slope_threshold_min] = 0
+                    slope_every_sensor[slope_every_sensor >= slope_threshold_max] = 0
+                    slope_every_sensor[slope_every_sensor >= slope_threshold_min] = 1
+                    slope_alarm[0:-1, :] = slope_alarm[1:slope_alarm.shape[0], :]
+                    slope_alarm[-1, :] = slope_every_sensor
+                    slope_every_sensor = add_slope.dot(slope_alarm)
+                    if slope_every_sensor.max() >= slope_alarm.shape[0]:
+                        pos = np.unravel_index(np.argmax(slope_every_sensor), slope_every_sensor.shape)
+                        print("Unlock:", pos)
+                        self.brake_control(False, self.lock_value)
+                        time.sleep(3)
+                        break
+            file.close()
+
+    def record(self):
+        data_path = self.father_path + os.path.sep + "resource" + os.path.sep + "record" + ".txt"
+        with open(data_path, 'w') as file:
+            while True:
+                if self.flag_read:
+                    self.read_softskin_data()
+                if len(self.raw_data) == len(self.base_data):
+                    temp_data = np.array(self.raw_data) - np.array(self.base_data)
+                    file.write(str(temp_data.tolist()) + '\n')
+                    time.sleep(0.01)
+            file.close()
 
 
 

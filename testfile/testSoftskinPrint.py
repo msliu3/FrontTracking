@@ -55,62 +55,61 @@ if __name__ == '__main__':
     # thread_motor.start()
     # thread_skin.start()
     """标准测试上锁解锁"""
-    # def lock_or_unlock(command):
-    #     if command == 0:
-    #         """上锁"""
-    #         print("-----locking-----")
-    #         ss.is_locked = False
-    #         ss.locking = True
-    #         ss.brake_control(ss.locking, distance = 200)
-    #         print("waiting for 10 seconds")
-    #         time.sleep(10)
-    #     elif command == 1:
-    #         """解锁"""
-    #         print("-----unlocking-----")
-    #         ss.is_locked = True
-    #         ss.locking = False
-    #         dis= 200
-    #         ss.lock_value = dis
-    #         ss.brake_control(ss.locking, dis)
-    #         print("done")
-    #         time.sleep(2)
-    #     elif command == 2:
-    #         """上锁加解锁"""
-    #         """上锁"""
-    #         print("-----locking-----")
-    #         ss.is_locked = False
-    #         ss.locking = True
-    #         ss.brake_control(ss.locking, distance = 200)
-    #         print("waiting")
-    #         for i in range(20):
-    #             print(i, "second")
-    #             time.sleep(1)
-    #         """解锁"""
-    #         print("-----unlocking-----")
-    #         ss.is_locked = True
-    #         ss.locking = False
-    #         ss.brake_control(ss.locking, distance = 200)
-    #         print("done")
-    #         time.sleep(2)
-    #
-    # lock_or_unlock(1)
-    #
+    def lock_or_unlock(command):
+        if command == 0:
+            """上锁"""
+            print("-----locking-----")
+            ss.is_locked = False
+            ss.locking = True
+            ss.brake_control(ss.locking, distance = 200)
+            print("waiting for 10 seconds")
+            time.sleep(10)
+        elif command == 1:
+            """解锁"""
+            print("-----unlocking-----")
+            ss.is_locked = True
+            ss.locking = False
+            dis= 550
+            ss.lock_value = dis
+            ss.brake_control(ss.locking, dis)
+            print("done")
+            time.sleep(2)
+        elif command == 2:
+            """上锁加解锁"""
+            """上锁"""
+            print("-----locking-----")
+            ss.is_locked = False
+            ss.locking = True
+            ss.brake_control(ss.locking, distance = 200)
+            print("waiting")
+            for i in range(5):
+                print(i, "second")
+                time.sleep(1)
+            """解锁"""
+            print("-----unlocking-----")
+            ss.is_locked = True
+            ss.locking = False
+            ss.brake_control(ss.locking, distance = 200)
+            print("done")
+            time.sleep(2)
+
+    lock_or_unlock(0)
+
     # cd.stopMotor()
 
     """检测调整"""
     # print("start!")
-    # ss.adjust_direction(cd, event)
-    # time.sleep(1)
-    # # ss.lock_value = 0
-    # # ss.brake_control(True,550)
-    # # dis = 200
-    # # ss.lock_value = dis
-    # # ss.brake_control(True, dis)
-    # ss.stop_ssl(True, cd, event)
+    # # ss.adjust_direction(cd, event)
+    # time.sleep(3)
+    # lock_or_unlock(1)
+    # print("end")
+
     # ss.lock_value = 550
     # ss.brake_control(False, 550)
-    # ss.lock_value = 550
-    # ss.brake_control(False, 550)
+    # cd.speed = 0.2
+    # time.sleep(2)
+    # cd.speed = 0
+
 
     """检测异常"""
 
@@ -124,11 +123,8 @@ if __name__ == '__main__':
     #     # ss.brake_control(False, ss.lock_value)
     #     ss.unlock()
     #     print("done")
-    #     break
-
-
-
-
+    #     time.sleep(3)
+    #     # break
 
     """终止SSL"""
 
@@ -178,4 +174,7 @@ if __name__ == '__main__':
     #         if event.is_set():
     #             break
     #     file.close()
+
+    # ss.collect_data()
+    # ss.unlock_new()
 

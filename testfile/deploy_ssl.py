@@ -15,6 +15,7 @@ import collections
 import threading
 import warnings
 import ctypes as ct
+import random
 
 warnings.filterwarnings('ignore')
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -79,10 +80,11 @@ class Map:
         self.gate_region_3 = [3.2, 0.9]
         self.gate_region_4 = [0.8, 0]
 
-        self.hall_r2_r1 = [0]
-        self.hall_r2_r4 = [0, 0, 0]
-        self.hall_same = [45, 315, 0]
-        self.hall_r3_r1 = [0, 0, 0, 45, 45, 0, 0]
+        self.hall_r2_r1 = [0, 0, 180, 180, 0]
+        self.hall_r2_r4 = [0, 0, 0, 90]
+        self.hall_same = [45, 0] # [45, 315, 0]
+        self.hall_r3_r1 = [0, 0, 0, 45] # [0, 0, 0, 45, 45, 0, 0]
+        self.hall_r2_hall = [0, 0, 0, 270]
 
     # just show next position and its facing direction
     def next_walker_pos(self, direction):
@@ -284,7 +286,7 @@ class GccGenerator:
 
         return tau, cc
 
-    def cal_gcc_online(self, input_dir, save_count, type='Vector', debug=True, denoise=True):
+    def cal_gcc_online(self, input_dir, save_count, type='Vector', debug=True, denoise=True, Baseline=True):
         for i in range(1, 5):
             if debug:
                 if i == 1:
@@ -316,9 +318,11 @@ class GccGenerator:
         center = int(len(locals()['data%d' % 1]) / 2)
 
         gcc_bias = []
+        taus = []
         for i in range(1, 5):
             for j in range(i + 1, 5):
                 tau, cc = self.gcc_phat(locals()['data%d' % i], locals()['data%d' % j], fs)
+                taus.append(tau)
                 for k in range(center - self.gcc_width_half, center + self.gcc_width_half + 1):
                     gcc_vector.append(cc[k])
                 gcc_bias.append(cc)
@@ -349,10 +353,32 @@ class GccGenerator:
 
         bias = [bias1, bias2, bias3, bias4, bias5, bias6]
 
-        if type == 'Bias':
-            return bias
+        # Baseline about TDOA
+        angle = 0
+        max_tau = 343.2/0.55
+        alpha = math.asin(taus[0] / max_tau) * 180 / math.pi
+        if taus[2] + taus[3] > 0:
+            if taus[0] > 0:
+                angle = 270 + alpha
+            else:
+                angle = alpha
+        else:
+            if taus[0] > 0:
+                angle = 180 + alpha
+            else:
+                angle = 90 + alpha
 
-        return gcc_vector
+        if Baseline is True:
+            if type == 'Bias':
+                return bias, angle
+            else:
+                return gcc_vector, angle
+        else:
+            if type == 'Bias':
+                return bias
+            else:
+                return gcc_vector
+
 
 
 """
@@ -814,6 +840,7 @@ def loop_record(control, source='test'):
     map.walker_pos_x = -2.1
     map.walker_pos_z = 0.9
     map.walker_face_to = 90
+    # -2.1 0.9 90
     # 1.0, 1.85, 0
     # -3.1, 0.9, 90
 
@@ -893,10 +920,11 @@ def loop_record(control, source='test'):
         print("producing action ...")
 
         # fixme, change debug model if mic change
-        gcc = gccGenerator.cal_gcc_online(WAV_PATH, saved_count, type='Bias', debug=False)
+        # input_dir, save_count, type='Vector', debug=True, denoise=True, Baseline=True
+        gcc, angle_tdoa = gccGenerator.cal_gcc_online(WAV_PATH, saved_count, type='Bias', debug=False, denoise=True, Baseline=True)
         state = np.array(gcc)[np.newaxis, :]
 
-        print("GCC Bias :", gcc)
+        # print("GCC Bias :", gcc)
 
         # todo, define invalids, based on constructed map % restrict regions
         invalids_dire = map.detect_invalid_directions()
@@ -908,24 +936,46 @@ def loop_record(control, source='test'):
 
         print("invalids_idx of mic: ", invalids_idx)
 
+        tmp_tdoa = [0, 1, 2, 3, 4, 5, 6, 7]
+        valid_tdoa = []
+        for i in range(8):
+            if tmp_tdoa[i] not in invalids_idx:
+                valid_tdoa.append(tmp_tdoa[i])
+
+        action_tdoa = int(round(angle_tdoa / 45))
+        if action_tdoa in invalids_idx:
+            action_tdoa = random.choice(valid_tdoa)
+
         # set invalids_idx in real test
-        action, _ = actor.output_action(state, [])
+        action, _ = actor.output_action(state, invalids_idx)
 
         print("prob of mic: ", _)
 
         # transform mic direction to walker direction
+
         direction = (action + 6) % 7 * 45
+        direction_tdoa = (action_tdoa + 6) % 7 *45
+
+        print("TDOA direction of walker: ", direction_tdoa)
 
         # bias is 45 degree, ok
         print("Estimated direction of walker : ", direction)
 
+        # fixme, use baseline or RL
+        # direction = direction_tdoa
+
         # fixme, for test or hard code, cover direction
-        # direction = int(input())
         if source == '0' and saved_count < len(map.hall_same) - 1:
             direction = map.hall_same[saved_count]
 
-        if source == '1' and saved_count < len(map.hall_r2_r1):
+        if source == '1' and saved_count < len(map.hall_r2_hall):
+            direction = map.hall_r2_hall[saved_count]
+
+        if source == '2' and saved_count < len(map.hall_r2_r1):
             direction = map.hall_r2_r1[saved_count]
+
+        if source == '4' and saved_count < len(map.hall_r2_r4):
+            direction = map.hall_r2_r4[saved_count]
 
         print("Applied direction of walker :", direction)
 
@@ -963,9 +1013,9 @@ def loop_record(control, source='test'):
 
         print("apply movement ...")
 
-        # SSLturning(control, direction)
+        SSLturning(control, direction)
 
-        # control.speed = STEP_SIZE / FORWARD_SECONDS
+        control.speed = STEP_SIZE / FORWARD_SECONDS
         control.radius = 0
         control.omega = 0
         time.sleep(FORWARD_SECONDS)
