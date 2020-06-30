@@ -61,7 +61,7 @@ if __name__ == '__main__':
             print("-----locking-----")
             ss.is_locked = False
             ss.locking = True
-            ss.brake_control(ss.locking, distance = 200)
+            ss.brake_control(ss.locking, distance = 550)
             print("waiting for 10 seconds")
             time.sleep(10)
         elif command == 1:
@@ -93,7 +93,7 @@ if __name__ == '__main__':
             print("done")
             time.sleep(2)
 
-    lock_or_unlock(0)
+    lock_or_unlock(1)
 
     # cd.stopMotor()
 

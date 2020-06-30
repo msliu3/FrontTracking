@@ -16,7 +16,6 @@
       args="0.48 0 0.43 0 0 0 1  /base_link /imu_link 100"/>
 
   <node pkg="neo_front_following" type="base_controller.py" name="base_controller_node"></node>
-<!--   <node pkg="neo_front_following" type="CD_IMU.py" name="base_controller_node"></node> -->
 
   <node pkg="neo_front_following" type="IMU_serial.py" name="imu_node"/>
 
@@ -44,6 +43,6 @@
   </node>
 
   <param name="/use_sim_time" value="false"/>
-  <node name="rviz" pkg="rviz" type="rviz"/>
+<!--   <node name="rviz" pkg="rviz" type="rviz"/> -->
 
 </launch>
